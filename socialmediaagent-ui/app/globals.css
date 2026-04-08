@@ -1,0 +1,124 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary-container: var(--primary-container);
+  --color-surface: var(--surface);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  :root {
+    --background: #f9f9ff;
+    --foreground: #151c27;
+    --surface: #f9f9ff;
+    --on-surface: #151c27;
+    --on-surface-variant: #4a4455;
+    --card: #ffffff;
+    --card-foreground: #151c27;
+    --popover: #ffffff;
+    --popover-foreground: #151c27;
+    --primary: #630ed4;
+    --primary-container: #7c3aed;
+    --primary-foreground: #ffffff;
+    --secondary: #005eb5;
+    --secondary-foreground: #ffffff;
+    --muted: #f0f3ff;
+    --muted-foreground: #4a4455;
+    --accent: #e7eefe;
+    --accent-foreground: #151c27;
+    --destructive: #ba1a1a;
+    --outline: #7b7487;
+    --outline-variant: #ccc3d8;
+    --border: #ccc3d8;
+    --input: #dce2f3;
+    --ring: #732ee4;
+    --radius: 0.5rem;
+    --surface-container-lowest: #ffffff;
+    --surface-container-low: #f0f3ff;
+    --surface-container: #e7eefe;
+    --surface-container-high: #e2e8f8;
+    --surface-container-highest: #dce2f3;
+    --sidebar: #f0f3ff;
+    --sidebar-foreground: #151c27;
+    --sidebar-primary: #630ed4;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #e7eefe;
+    --sidebar-accent-foreground: #151c27;
+    --sidebar-border: #ccc3d8;
+    --sidebar-ring: #732ee4;
+    --font-sans: "Inter", sans-serif;
+  }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  summary,
+  label[for],
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+}
