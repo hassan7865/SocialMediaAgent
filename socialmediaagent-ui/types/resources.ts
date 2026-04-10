@@ -38,6 +38,10 @@ export interface Post {
   created_at?: string;
   approval_status?: string;
   status: string;
+  external_publish_id?: string | null;
+  publish_last_error?: string | null;
+  publish_attempted_at?: string | null;
+  published_at?: string | null;
 }
 
 export interface CalendarItem {

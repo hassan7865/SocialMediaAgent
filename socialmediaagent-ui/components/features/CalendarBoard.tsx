@@ -8,6 +8,8 @@ import { useGetCalendar } from "@/hooks/useCalendar";
 import { useApprovePost, useDeletePosts, useGetPosts, useUpdatePosts } from "@/hooks/usePosts";
 import { AppLoader } from "@/components/shared/AppLoader";
 import { PageContainer, PageHeader } from "@/components/shared/PagePrimitives";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 type CalendarPost = {
   id: string;
@@ -105,13 +107,27 @@ export function CalendarBoard() {
             description={`${format(currentWeekStart, "MMM d")} - ${format(addDays(currentWeekStart, 6), "MMM d, yyyy")}`}
             actions={
               <div className="flex gap-2">
-                <button type="button" onClick={() => setCurrentWeekStart((prev) => addWeeks(prev, -1))} className="rounded-full border border-outline-variant/20 bg-white p-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  className="rounded-full border-outline-variant/20 bg-white"
+                  onClick={() => setCurrentWeekStart((prev) => addWeeks(prev, -1))}
+                >
                   <ChevronLeft size={14} />
-                </button>
-                <button type="button" onClick={() => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))} className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-white">Today</button>
-                <button type="button" onClick={() => setCurrentWeekStart((prev) => addWeeks(prev, 1))} className="rounded-full border border-outline-variant/20 bg-white p-2">
+                </Button>
+                <Button type="button" size="sm" className="rounded-full px-5 text-xs font-bold" onClick={() => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
+                  Today
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  className="rounded-full border-outline-variant/20 bg-white"
+                  onClick={() => setCurrentWeekStart((prev) => addWeeks(prev, 1))}
+                >
                   <ChevronRight size={14} />
-                </button>
+                </Button>
               </div>
             }
           />
@@ -131,9 +147,10 @@ export function CalendarBoard() {
                     {weekPosts
                       .filter((p) => isSameDay(p.day, dayDate))
                       .map((post) => (
-                        <button
+                        <Button
                           key={post.id}
                           type="button"
+                          variant="ghost"
                           onClick={() => {
                             setIsSwitchingPost(true);
                             setActivePostId(post.id);
@@ -141,7 +158,7 @@ export function CalendarBoard() {
                             setIsEditing(false);
                             setPanelOpen(true);
                           }}
-                          className={`w-full rounded-2xl border border-outline-variant/20 bg-white p-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+                          className={`h-auto w-full flex-col items-start rounded-2xl border border-outline-variant/20 bg-white p-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-md ${
                             activePostId === post.id ? "ring-2 ring-primary/20" : ""
                           }`}
                           style={{ borderLeft: `3px solid ${post.borderColor}` }}
@@ -157,7 +174,7 @@ export function CalendarBoard() {
                             {post.title}
                           </h4>
                           <span className={`rounded px-2 py-0.5 text-[9px] font-bold ${statusClass(post.status)}`}>{post.status}</span>
-                        </button>
+                        </Button>
                       ))}
                     {!isLoading && !isError && weekPosts.filter((p) => isSameDay(p.day, dayDate)).length === 0 ? (
                       <p className="rounded-xl bg-white/70 p-3 text-xs text-on-surface-variant">No posts</p>
@@ -182,9 +199,9 @@ export function CalendarBoard() {
       >
           <div className="flex items-center justify-between border-b border-outline-variant/20 p-6">
             <h3 className="text-lg font-black">Post Details</h3>
-            <button onClick={() => setPanelOpen(false)} className="rounded-full p-2 transition-colors hover:bg-surface-container-low">
+            <Button type="button" variant="ghost" size="icon-sm" className="rounded-full" onClick={() => setPanelOpen(false)}>
               <X size={16} />
-            </button>
+            </Button>
           </div>
           <div
             className={`flex-1 space-y-6 overflow-y-auto p-6 transition-all duration-200 ${
@@ -197,11 +214,11 @@ export function CalendarBoard() {
               {activePost ? <span className={`mt-3 inline-block rounded px-2 py-0.5 text-[10px] font-bold ${statusClass(activePost.status)}`}>{activePost.status}</span> : null}
             </div>
             {isEditing ? (
-              <textarea
+              <Textarea
                 value={editedText}
                 onChange={(e) => setEditedText(e.target.value)}
                 rows={8}
-                className="w-full rounded-2xl border border-outline-variant/20 bg-white p-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-primary/20"
+                className="min-h-[180px] rounded-2xl border-outline-variant/20"
               />
             ) : (
               <p className="rounded-2xl border border-outline-variant/20 bg-white p-4 text-sm leading-relaxed">
@@ -210,8 +227,10 @@ export function CalendarBoard() {
             )}
           </div>
           <div className="grid grid-cols-2 gap-3 border-t border-outline-variant/20 bg-surface-container-low/40 p-6">
-            <button
-              className="col-span-2 rounded-xl border border-outline-variant/20 bg-white py-3 text-sm font-bold hover:bg-surface-container-low"
+            <Button
+              type="button"
+              variant="outline"
+              className="col-span-2 rounded-xl border-outline-variant/20 py-3 text-sm font-bold"
               disabled={!activePost || updatePost.isPending}
               onClick={async () => {
                 if (!activePost) return;
@@ -225,9 +244,11 @@ export function CalendarBoard() {
               }}
             >
               {isEditing ? "Save Edit" : "Edit"}
-            </button>
-            <button
-              className="rounded-xl bg-destructive/10 py-3 text-sm font-bold text-destructive hover:bg-destructive/20 disabled:opacity-60"
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="rounded-xl py-3 text-sm font-bold"
               disabled={!activePost || deletePost.isPending}
               onClick={async () => {
                 if (!activePost) return;
@@ -237,9 +258,10 @@ export function CalendarBoard() {
               }}
             >
               Delete
-            </button>
-            <button
-              className="rounded-xl bg-gradient-to-r from-primary to-primary-container py-3 text-sm font-bold text-white disabled:opacity-60"
+            </Button>
+            <Button
+              type="button"
+              className="rounded-xl bg-gradient-to-r from-primary to-primary-container py-3 text-sm font-bold text-primary-foreground"
               disabled={!activePost || approvePost.isPending}
               onClick={async () => {
                 if (!activePost) return;
@@ -247,7 +269,7 @@ export function CalendarBoard() {
               }}
             >
               Approve
-            </button>
+            </Button>
           </div>
       </aside>
     </PageContainer>

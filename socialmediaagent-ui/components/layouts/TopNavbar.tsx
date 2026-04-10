@@ -1,16 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Bell, ChevronDown, LogOut, Menu, Search } from "lucide-react";
 
 import { AppSidebar } from "@/components/layouts/AppSidebar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
 
 export function TopNavbar() {
   const { user, isAdmin, canReview, logout } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const roleLabel = useMemo(() => {
     if (isAdmin) return "Admin";
@@ -34,51 +40,46 @@ export function TopNavbar() {
         </Sheet>
         <div className="relative hidden sm:block">
           <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-outline" />
-          <input
-            className="w-52 rounded-full border-none bg-surface-container-low py-2 pr-4 pl-10 text-sm outline-none focus:ring-2 focus:ring-primary/20 lg:w-64"
+          <Input
+            className="w-52 rounded-full border-none bg-surface-container-low py-2 pr-4 pl-10 lg:w-64"
             placeholder="Search content..."
-            type="text"
+            type="search"
           />
         </div>
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
-        <button className="relative rounded-full p-2 transition-all hover:bg-surface-container-low">
+        <Button type="button" variant="ghost" size="icon-sm" className="relative rounded-full">
           <Bell className="h-5 w-5 text-on-surface-variant" />
           <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive" />
-        </button>
+          <span className="sr-only">Notifications</span>
+        </Button>
         <div className="mx-1 hidden h-8 w-px bg-outline-variant/20 sm:mx-2 sm:block" />
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setIsMenuOpen((prev) => !prev)}
-            className="flex items-center gap-2 rounded-xl px-2 py-1 transition-colors hover:bg-surface-container-low sm:gap-3"
-          >
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-bold leading-tight">{user?.full_name || user?.email || "User"}</p>
-              <p className="text-[10px] font-medium text-on-surface-variant">{roleLabel}</p>
-            </div>
-            <ChevronDown className="h-4 w-4 text-on-surface-variant" />
-          </button>
-
-          {isMenuOpen ? (
-            <div className="absolute top-12 right-0 min-w-48 rounded-xl border border-outline-variant/20 bg-white p-2 shadow-lg">
-              <button
-                type="button"
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
-                onClick={async () => {
-                  setIsMenuOpen(false);
-                  await logout();
-                  if (typeof window !== "undefined") {
-                    window.location.href = "/login";
-                  }
-                }}
-              >
-                <LogOut className="h-4 w-4" />
-                Logout
-              </button>
-            </div>
-          ) : null}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="ghost" className="gap-2 rounded-xl px-2 sm:gap-3">
+              <div className="hidden text-right sm:block">
+                <p className="text-sm font-bold leading-tight">{user?.full_name || user?.email || "User"}</p>
+                <p className="text-[10px] font-medium text-on-surface-variant">{roleLabel}</p>
+              </div>
+              <ChevronDown className="h-4 w-4 text-on-surface-variant" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-48">
+            <DropdownMenuItem
+              variant="destructive"
+              className="gap-2 font-medium"
+              onSelect={async () => {
+                await logout();
+                if (typeof window !== "undefined") {
+                  window.location.href = "/login";
+                }
+              }}
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

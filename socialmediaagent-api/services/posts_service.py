@@ -6,6 +6,7 @@ from models.generation_jobs import GenerationJob, JobStatus, JobType
 from models.post_performance import PostPerformance
 from models.posts import ApprovalStatus, CreatedBy, Post, PostStatus
 from models.users import User
+from services import publish_service
 from services.common import paginated_data
 from services.common import get_company_for_user, to_dict
 
@@ -29,6 +30,9 @@ def _post_payload(post: Post):
             "created_by",
             "created_at",
             "updated_at",
+            "external_publish_id",
+            "publish_last_error",
+            "publish_attempted_at",
         ],
     )
 
@@ -58,8 +62,10 @@ async def create_post(payload, db: AsyncSession, user: User):
     company = await get_company_for_user(db, user)
     if company is None:
         raise ValueError("Company profile is required")
+    if payload.company_id != company.id:
+        raise ValueError("company_id must match your organization")
     post = Post(
-        company_id=payload.company_id if getattr(payload, "company_id", None) else company.id,
+        company_id=company.id,
         platform=payload.platform,
         content_text=payload.content_text,
         scheduled_at=payload.scheduled_at,
@@ -103,8 +109,10 @@ async def approve_post(post_id: str, db: AsyncSession, user: User):
         post.rejection_reason = None
         await db.commit()
         await db.refresh(post)
+        await publish_service.try_publish_post_by_id(db, post_id, force_immediate=False)
+        await db.refresh(post)
         return _post_payload(post)
-    return {"id": post_id, "approval_status": "approved"}
+    raise LookupError("Post not found")
 
 
 async def reject_post(post_id: str, reason: str, db: AsyncSession, user: User):
@@ -117,18 +125,25 @@ async def reject_post(post_id: str, reason: str, db: AsyncSession, user: User):
         await db.commit()
         await db.refresh(post)
         return _post_payload(post)
-    return {"id": post_id, "approval_status": "rejected", "reason": reason}
+    raise LookupError("Post not found")
 
 
 async def publish_now(post_id: str, db: AsyncSession, user: User):
+    from core.config import get_settings
+
     company = await get_company_for_user(db, user)
     post = await db.get(Post, post_id)
-    if post and company and post.company_id == company.id:
-        post.status = PostStatus.published
-        await db.commit()
-        await db.refresh(post)
-        return _post_payload(post)
-    return {"id": post_id, "status": "published"}
+    if not post or not company or post.company_id != company.id:
+        raise LookupError("Post not found")
+    if post.approval_status != ApprovalStatus.approved:
+        raise ValueError("Post must be approved before publishing")
+    if not get_settings().POSTFORME_API_KEY.strip():
+        raise ValueError("Post for Me is not configured (set POSTFORME_API_KEY)")
+    if post.external_publish_id:
+        raise ValueError("Post was already submitted to Post for Me")
+    await publish_service.try_publish_post(db, post, force_immediate=True)
+    await db.refresh(post)
+    return _post_payload(post)
 
 
 async def generate_post(payload, background_tasks: BackgroundTasks, db: AsyncSession, user: User):

@@ -14,6 +14,7 @@ import {
 } from "@/hooks/useAnalytics";
 import { AppLoader } from "@/components/shared/AppLoader";
 import { PageContainer, PageHeader } from "@/components/shared/PagePrimitives";
+import { Button } from "@/components/ui/button";
 
 const heatmapRows = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const heatmapCols = ["12a", "2a", "4a", "6a", "8a", "10a", "12p", "2p", "4p", "6p", "8p", "10p"];
@@ -147,7 +148,9 @@ export function AnalyticsDashboard() {
         <div className="space-y-6 lg:col-span-2">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold tracking-tight">Best Performing Posts</h3>
-            <button className="text-xs font-bold text-primary hover:underline">View All</button>
+            <Button type="button" variant="link" className="h-auto p-0 text-xs font-bold">
+              View All
+            </Button>
           </div>
           <div className="space-y-4">
             {(topPosts.data ?? []).map((post) => (

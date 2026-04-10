@@ -7,6 +7,10 @@ import { useForm } from "react-hook-form";
 
 import { useCreateAuth } from "@/hooks/useAuth";
 import { RegisterInput, registerSchema } from "@/lib/validations/auth";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -59,44 +63,68 @@ export function RegisterForm() {
           </div>
 
           <div className="w-full">
-            <div className="rounded-[12px] border border-[color:var(--border)]/10 bg-[var(--surface-container-lowest)] p-8 shadow-[0px_20px_40px_rgba(21,28,39,0.04)] md:p-10">
-              <div className="mb-8">
-                <h2 className="mb-2 text-2xl font-extrabold tracking-tight text-foreground">Create your account</h2>
-                <p className="text-sm text-muted-foreground">Start your 14-day free trial. No credit card required.</p>
-              </div>
-
-              <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-                <div className="space-y-2">
-                  <label className="ml-1 text-[0.75rem] font-bold uppercase tracking-widest text-muted-foreground">Full Name</label>
-                  <input className="w-full rounded-lg border-0 bg-surface-container-low py-3 pr-4 pl-4 text-sm text-foreground outline-none transition-all placeholder:text-outline focus:ring-2 focus:ring-primary/20" placeholder="Alex Rivers" {...form.register("full_name")} />
-                </div>
-                <div className="space-y-2">
-                  <label className="ml-1 text-[0.75rem] font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
-                  <input className="w-full rounded-lg border-0 bg-surface-container-low py-3 pr-4 pl-4 text-sm text-foreground outline-none transition-all placeholder:text-outline focus:ring-2 focus:ring-primary/20" placeholder="alex@workspace.com" {...form.register("email")} />
-                </div>
-                <div className="space-y-2">
-                  <label className="ml-1 text-[0.75rem] font-bold uppercase tracking-widest text-muted-foreground">Password</label>
-                  <input type="password" className="w-full rounded-lg border-0 bg-surface-container-low py-3 pr-4 pl-4 text-sm text-foreground outline-none transition-all placeholder:text-outline focus:ring-2 focus:ring-primary/20" placeholder="••••••••" {...form.register("password")} />
+            <Card className="rounded-[12px] border-[color:var(--border)]/10 bg-[var(--surface-container-lowest)] shadow-[0px_20px_40px_rgba(21,28,39,0.04)] ring-0">
+              <CardContent className="p-8 md:p-10">
+                <div className="mb-8">
+                  <h2 className="mb-2 text-2xl font-extrabold tracking-tight text-foreground">Create your account</h2>
+                  <p className="text-sm text-muted-foreground">Start your 14-day free trial. No credit card required.</p>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isPending}
-                  className="flex w-full items-center justify-center gap-2 rounded-[8px] bg-gradient-to-br from-primary to-primary-container py-3.5 text-sm font-bold tracking-wide text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:shadow-primary/30 active:scale-[0.98] disabled:opacity-70"
-                >
-                  {isPending ? "Creating..." : "Get Started"}
-                  <span aria-hidden className="text-[18px]">→</span>
-                </button>
+                <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
+                  <div className="space-y-2">
+                    <Label htmlFor="register-name" className="ml-1 text-[0.75rem] font-bold uppercase tracking-widest text-muted-foreground">
+                      Full Name
+                    </Label>
+                    <Input
+                      id="register-name"
+                      className="h-auto min-h-11 rounded-lg border-0 bg-surface-container-low py-3 placeholder:text-outline"
+                      placeholder="Alex Rivers"
+                      {...form.register("full_name")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="register-email" className="ml-1 text-[0.75rem] font-bold uppercase tracking-widest text-muted-foreground">
+                      Email Address
+                    </Label>
+                    <Input
+                      id="register-email"
+                      type="email"
+                      className="h-auto min-h-11 rounded-lg border-0 bg-surface-container-low py-3 placeholder:text-outline"
+                      placeholder="alex@workspace.com"
+                      {...form.register("email")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="register-password" className="ml-1 text-[0.75rem] font-bold uppercase tracking-widest text-muted-foreground">
+                      Password
+                    </Label>
+                    <Input
+                      id="register-password"
+                      type="password"
+                      className="h-auto min-h-11 rounded-lg border-0 bg-surface-container-low py-3 placeholder:text-outline"
+                      placeholder="••••••••"
+                      {...form.register("password")}
+                    />
+                  </div>
 
-                <div className="pt-4 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Already have an account?
-                    <Link href="/login" className="ml-1 font-bold text-primary underline-offset-4 hover:underline">Log in</Link>
-                  </p>
-                </div>
-              </form>
+                  <Button
+                    type="submit"
+                    disabled={isPending}
+                    className="h-auto w-full gap-2 rounded-[8px] bg-gradient-to-br from-primary to-primary-container py-3.5 text-sm font-bold tracking-wide shadow-lg shadow-primary/20 hover:shadow-primary/30"
+                  >
+                    {isPending ? "Creating..." : "Get Started"}
+                    <span aria-hidden className="text-[18px]">→</span>
+                  </Button>
 
-            </div>
+                  <div className="pt-4 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Already have an account?
+                      <Link href="/login" className="ml-1 font-bold text-primary underline-offset-4 hover:underline">Log in</Link>
+                    </p>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

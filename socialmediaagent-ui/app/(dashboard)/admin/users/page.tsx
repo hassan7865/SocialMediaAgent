@@ -7,6 +7,20 @@ import { useAuth } from "@/context/AuthContext";
 import { useAddCompanyMember, useGetAdminUsers, useUpdateReviewerPermission } from "@/hooks/useAdminUsers";
 import { AppLoader } from "@/components/shared/AppLoader";
 import { PageContainer, PageHeader } from "@/components/shared/PagePrimitives";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 export default function AdminUsersPage() {
   const { isAdmin } = useAuth();
@@ -34,84 +48,83 @@ export default function AdminUsersPage() {
         }
       />
 
-      <div className="rounded-2xl border border-outline-variant/20 bg-white p-5 shadow-sm">
-        <h2 className="text-base font-black">Add Company User</h2>
-        <p className="mt-1 text-xs text-on-surface-variant">
-          Enter an existing user email/name to add membership, or enter a new email to create and add a new user to this company.
-        </p>
-        <form
-          className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-5"
-          onSubmit={async (event) => {
-            event.preventDefault();
-            if (!identifier.trim()) return;
-            await addMember.mutateAsync({ identifier: identifier.trim(), fullName: fullName.trim() || undefined });
-            setIdentifier("");
-            setFullName("");
-          }}
-        >
-          <input
-            value={identifier}
-            onChange={(event) => setIdentifier(event.target.value)}
-            placeholder="Email or full name"
-            className="w-full rounded-xl border border-outline-variant/20 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 md:col-span-2"
-          />
-          <input
-            value={fullName}
-            onChange={(event) => setFullName(event.target.value)}
-            placeholder="Full name (optional for new user)"
-            className="w-full rounded-xl border border-outline-variant/20 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 md:col-span-2"
-          />
-          <button
-            type="submit"
-            disabled={addMember.isPending}
-            className="rounded-xl bg-gradient-to-r from-primary to-primary-container px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
+      <Card className="border-outline-variant/20 bg-white shadow-sm ring-outline-variant/20">
+        <CardContent className="pt-6">
+          <h2 className="text-base font-black">Add Company User</h2>
+          <p className="mt-1 text-xs text-on-surface-variant">
+            Enter an existing user email/name to add membership, or enter a new email to create and add a new user to this company.
+          </p>
+          <form
+            className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-5"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (!identifier.trim()) return;
+              await addMember.mutateAsync({ identifier: identifier.trim(), fullName: fullName.trim() || undefined });
+              setIdentifier("");
+              setFullName("");
+            }}
           >
-            {addMember.isPending ? "Adding..." : "Add User"}
-          </button>
-        </form>
-      </div>
+            <Input
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
+              placeholder="Email or full name"
+              className={cn("h-auto min-h-9 rounded-xl py-2 md:col-span-2")}
+            />
+            <Input
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              placeholder="Full name (optional for new user)"
+              className={cn("h-auto min-h-9 rounded-xl py-2 md:col-span-2")}
+            />
+            <Button
+              type="submit"
+              disabled={addMember.isPending}
+              className="rounded-xl bg-gradient-to-r from-primary to-primary-container font-bold text-primary-foreground"
+            >
+              {addMember.isPending ? "Adding..." : "Add User"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
-      <div className="overflow-hidden rounded-2xl border border-outline-variant/20 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-sm">
-          <thead className="bg-surface-container-low/50 text-left text-xs uppercase tracking-wider text-on-surface-variant">
-            <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3">Reviewer</th>
-            </tr>
-          </thead>
-          <tbody>
+      <Card className="overflow-hidden border-outline-variant/20 bg-white shadow-sm ring-outline-variant/20">
+        <Table className="min-w-[720px]">
+          <TableHeader>
+            <TableRow className="border-outline-variant/10 hover:bg-surface-container-low/50">
+              <TableHead className="px-4 py-3 text-xs uppercase tracking-wider text-on-surface-variant">Name</TableHead>
+              <TableHead className="px-4 py-3 text-xs uppercase tracking-wider text-on-surface-variant">Email</TableHead>
+              <TableHead className="px-4 py-3 text-xs uppercase tracking-wider text-on-surface-variant">Role</TableHead>
+              <TableHead className="px-4 py-3 text-xs uppercase tracking-wider text-on-surface-variant">Reviewer</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {(data ?? []).map((user) => (
-              <tr key={user.id} className="border-t border-outline-variant/10">
-                <td className="px-4 py-3 font-semibold">{user.full_name || "Unnamed user"}</td>
-                <td className="px-4 py-3 text-on-surface-variant">{user.email}</td>
-                <td className="px-4 py-3 capitalize">{user.role}</td>
-                <td className="px-4 py-3">
-                  <label className="inline-flex cursor-pointer items-center gap-2">
-                    <input
-                      type="checkbox"
+              <TableRow key={user.id} className="border-outline-variant/10">
+                <TableCell className="px-4 py-3 font-semibold">{user.full_name || "Unnamed user"}</TableCell>
+                <TableCell className="px-4 py-3 text-on-surface-variant">{user.email}</TableCell>
+                <TableCell className="px-4 py-3 capitalize">{user.role}</TableCell>
+                <TableCell className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
                       checked={user.can_review}
-                      onChange={(event) =>
+                      disabled={updatePermission.isPending || user.role === "admin"}
+                      onCheckedChange={(checked) =>
                         updatePermission.mutate({
                           userId: user.id,
-                          canReview: event.target.checked,
+                          canReview: checked === true,
                         })
                       }
-                      disabled={updatePermission.isPending || user.role === "admin"}
                     />
-                    <span className="text-xs text-on-surface-variant">
+                    <Label className="cursor-pointer text-xs font-normal text-on-surface-variant">
                       {user.role === "admin" ? "Admins always have review access" : user.can_review ? "Enabled" : "Disabled"}
-                    </span>
-                  </label>
-                </td>
-              </tr>
+                    </Label>
+                  </div>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-        </div>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
     </PageContainer>
   );
 }

@@ -1,18 +1,99 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, ShieldCheck, Unplug, Globe, PlugZap, Shield, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
-import { useCreatePlatforms, useDeletePlatforms, useGetPlatforms, useUpdatePlatforms } from "@/hooks/usePlatforms";
+import { useCreatePlatforms, useDeletePlatforms, useGetPlatforms, useSyncPlatform, useUpdatePlatforms } from "@/hooks/usePlatforms";
+import { api } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
 import { AppLoader } from "@/components/shared/AppLoader";
 import { PageContainer, PageHeader } from "@/components/shared/PagePrimitives";
+import { Button } from "@/components/ui/button";
 import type { PlatformConnection } from "@/types/resources";
 
 export default function PlatformsPage() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const pfmSyncDone = useRef(false);
   const { data, isLoading, isError } = useGetPlatforms();
   const connectPlatform = useCreatePlatforms();
+  const syncPlatform = useSyncPlatform();
   const testPlatform = useUpdatePlatforms();
   const deletePlatform = useDeletePlatforms();
+
+  useEffect(() => {
+    if (typeof window === "undefined" || pfmSyncDone.current) return;
+    const params = new URLSearchParams(window.location.search.slice(1).replace(/\?/g, "&"));
+    const rawPfmSync = params.get("pfm_sync");
+    const pfmError = params.get("error");
+    const isSuccess = params.get("isSuccess");
+    const pfmFailed = Boolean(pfmError) || isSuccess === "false";
+
+    if (pfmError) {
+      toast.error(decodeURIComponent(pfmError.replace(/\+/g, " ")));
+    } else if (isSuccess === "false") {
+      toast.error("Post for Me did not complete the connection. Check that the account is allowed for this project.");
+    }
+
+    if (!rawPfmSync) {
+      if (pfmFailed) router.replace("/platforms");
+      return;
+    }
+
+    let syncKey = decodeURIComponent(rawPfmSync);
+    let embeddedProvider: string | null = null;
+    const qAt = syncKey.indexOf("?");
+    if (qAt !== -1) {
+      const inner = new URLSearchParams(syncKey.slice(qAt + 1).replace(/\?/g, "&"));
+      embeddedProvider = inner.get("provider");
+      syncKey = syncKey.slice(0, qAt);
+    }
+    syncKey = syncKey.trim();
+    if (!syncKey) {
+      if (pfmFailed) router.replace("/platforms");
+      return;
+    }
+
+    pfmSyncDone.current = true;
+
+    if (pfmFailed) {
+      router.replace("/platforms");
+      return;
+    }
+
+    if (syncKey === "all") {
+      const providerRaw = params.get("provider") ?? embeddedProvider;
+      const provider = providerRaw?.trim() || undefined;
+      void (async () => {
+        try {
+          const url = provider
+            ? `/api/platforms/sync/all?provider=${encodeURIComponent(provider)}`
+            : "/api/platforms/sync/all";
+          await api.post(url);
+          await queryClient.invalidateQueries({ queryKey: queryKeys.platforms.all });
+          toast.success("Platform connections refreshed from Post for Me");
+        } catch {
+          toast.error("Could not sync platforms from Post for Me");
+        } finally {
+          router.replace("/platforms");
+        }
+      })();
+      return;
+    }
+
+    syncPlatform.mutate(syncKey, {
+      onSuccess: () => {
+        toast.success("Platform linked from Post for Me");
+        router.replace("/platforms");
+      },
+      onError: () => {
+        router.replace("/platforms");
+      },
+    });
+  }, [router, syncPlatform, queryClient]);
 
   const platformOptions = useMemo(
     () => [
@@ -37,7 +118,7 @@ export default function PlatformsPage() {
       <PageHeader
         className="bg-gradient-to-br from-white via-surface-container-lowest to-surface-container-low"
         title="Platform Connections"
-        description="Connect, test, and manage your publishing channels."
+        description="OAuth runs through Post for Me. For Quickstart projects, set the Post for Me Project Redirect URL to this app’s /platforms?pfm_sync=all so we can refresh connections after login."
         badge={
           <p className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
             <Sparkles size={12} />
@@ -95,7 +176,7 @@ export default function PlatformsPage() {
               <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-lg border border-outline-variant/20 bg-surface-container-low/30 px-3 py-2">
                   <p className="text-on-surface-variant">Status</p>
-                  <p className="font-semibold">{isConnected ? "Ready to publish" : "Action required"}</p>
+                  <p className="font-semibold">{isConnected ? "Ready to publish via Post for Me" : "Connect via Post for Me"}</p>
                 </div>
                 <div className="rounded-lg border border-outline-variant/20 bg-surface-container-low/30 px-3 py-2">
                   <p className="text-on-surface-variant">Last update</p>
@@ -105,35 +186,37 @@ export default function PlatformsPage() {
 
               <div className="mt-5 flex flex-wrap gap-2">
                 {!isConnected ? (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => connectPlatform.mutate(platform.key)}
                     disabled={connectPlatform.isPending}
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
+                    className="gap-2 rounded-xl font-bold"
                   >
                     {connectPlatform.isPending ? <Loader2 size={14} className="animate-spin" /> : <PlugZap size={14} />}
                     Connect
-                  </button>
+                  </Button>
                 ) : (
                   <>
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
                       onClick={() => testPlatform.mutate(connectionId)}
                       disabled={testPlatform.isPending || !connectionId}
-                      className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/20 bg-white px-4 py-2 text-sm font-bold"
+                      className="gap-2 rounded-xl border-outline-variant/20 font-bold"
                     >
                       <ShieldCheck size={14} />
                       Test
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="destructive"
                       onClick={() => deletePlatform.mutate(connectionId)}
                       disabled={deletePlatform.isPending || !connectionId}
-                      className="inline-flex items-center gap-2 rounded-xl bg-destructive/10 px-4 py-2 text-sm font-bold text-destructive"
+                      className="gap-2 rounded-xl font-bold"
                     >
                       <Unplug size={14} />
                       Disconnect
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>

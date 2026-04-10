@@ -66,6 +66,8 @@ async def get_approval_queue(db: AsyncSession, user: User):
                 "approval_status",
                 "created_at",
                 "updated_at",
+                "external_publish_id",
+                "publish_last_error",
             ],
         )
         for post in result.scalars().all()

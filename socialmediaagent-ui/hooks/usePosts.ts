@@ -60,6 +60,7 @@ export function useApprovePost() {
       toast.success("Post approved");
       queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.approval.queue });
     },
     onError: () => toast.error("Post approve failed"),
   });

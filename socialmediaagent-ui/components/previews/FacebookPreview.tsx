@@ -2,6 +2,7 @@ import Image from "next/image";
 import { MessageCircle, Share2, ThumbsUp } from "lucide-react";
 
 import { PreviewPost } from "@/components/previews/types";
+import { Button } from "@/components/ui/button";
 
 interface FacebookPreviewProps {
   post: PreviewPost;
@@ -26,18 +27,18 @@ export function FacebookPreview({ post }: FacebookPreviewProps) {
         </div>
       )}
       <div className="grid grid-cols-3 border-t border-outline-variant/20 px-2 py-1 text-on-surface-variant">
-        <button className="flex items-center justify-center gap-2 rounded py-2 hover:bg-surface-container-low">
+        <Button type="button" variant="ghost" size="sm" className="h-auto gap-2 py-2 font-bold">
           <ThumbsUp size={16} />
-          <span className="text-xs font-bold">Like</span>
-        </button>
-        <button className="flex items-center justify-center gap-2 rounded py-2 hover:bg-surface-container-low">
+          <span className="text-xs">Like</span>
+        </Button>
+        <Button type="button" variant="ghost" size="sm" className="h-auto gap-2 py-2 font-bold">
           <MessageCircle size={16} />
-          <span className="text-xs font-bold">Comment</span>
-        </button>
-        <button className="flex items-center justify-center gap-2 rounded py-2 hover:bg-surface-container-low">
+          <span className="text-xs">Comment</span>
+        </Button>
+        <Button type="button" variant="ghost" size="sm" className="h-auto gap-2 py-2 font-bold">
           <Share2 size={16} />
-          <span className="text-xs font-bold">Share</span>
-        </button>
+          <span className="text-xs">Share</span>
+        </Button>
       </div>
     </div>
   );

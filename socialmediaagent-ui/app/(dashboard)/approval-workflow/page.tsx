@@ -8,6 +8,12 @@ import { useGetAdminUsers } from "@/hooks/useAdminUsers";
 import { useCreateApproval, useGetApproval } from "@/hooks/useApproval";
 import { AppLoader } from "@/components/shared/AppLoader";
 import { PageContainer, PageHeader } from "@/components/shared/PagePrimitives";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export default function ApprovalWorkflowPage() {
   const { isAdmin } = useAuth();
@@ -66,101 +72,107 @@ export default function ApprovalWorkflowPage() {
       />
 
       <form onSubmit={onSubmit} className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <section className="space-y-4 rounded-2xl border border-outline-variant/20 bg-white p-5 shadow-sm lg:col-span-2">
-          <h2 className="text-lg font-black">Review Mode</h2>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            {(["full_review", "spot_check", "autonomous"] as const).map((option) => (
-              <label
-                key={option}
-                className={`rounded-xl border p-3 text-sm transition-colors ${
-                  activeMode === option
-                    ? "border-primary bg-primary/10"
-                    : "border-outline-variant/20 bg-surface-container-low/30"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="mode"
-                  value={option}
-                  checked={activeMode === option}
-                  onChange={(event) => setSelectedMode(event.target.value)}
+        <input type="hidden" name="mode" value={activeMode} readOnly aria-hidden />
+        <Card className="border-outline-variant/20 bg-white shadow-sm ring-outline-variant/20 lg:col-span-2">
+          <CardContent className="space-y-4 pt-6">
+            <h2 className="text-lg font-black">Review Mode</h2>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {(["full_review", "spot_check", "autonomous"] as const).map((option) => (
+                <Button
+                  key={option}
+                  type="button"
+                  variant={activeMode === option ? "default" : "outline"}
                   disabled={!isAdmin}
-                  className="sr-only"
-                />
-                <p className="font-bold capitalize">{option.replace("_", " ")}</p>
-                <p className="mt-1 text-xs text-on-surface-variant">{modeDescriptions[option]}</p>
-              </label>
-            ))}
-          </div>
-
-          <div className="space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Reviewers (company users)</span>
-            <input
-              value={reviewerSearch}
-              onChange={(event) => setReviewerSearch(event.target.value)}
-              placeholder="Search by name or email"
-              disabled={!isAdmin}
-              className="w-full rounded-xl border border-outline-variant/20 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-            />
-            <div className="max-h-56 space-y-2 overflow-auto rounded-xl border border-outline-variant/20 p-2">
-              {filteredUsers.map((user) => (
-                <label key={user.id} className="flex items-center justify-between rounded-lg px-2 py-1 text-sm hover:bg-surface-container-low/40">
-                  <span className="truncate">
-                    <span className="font-semibold">{user.full_name || "Unnamed user"}</span>
-                    <span className="ml-2 text-xs text-on-surface-variant">{user.email}</span>
+                  className="h-auto flex-col items-start gap-1 rounded-xl p-3 text-left text-sm whitespace-normal"
+                  onClick={() => setSelectedMode(option)}
+                >
+                  <span className="font-bold capitalize">{option.replace("_", " ")}</span>
+                  <span
+                    className={cn(
+                      "text-xs font-normal",
+                      activeMode === option ? "text-primary-foreground/85" : "text-muted-foreground",
+                    )}
+                  >
+                    {modeDescriptions[option]}
                   </span>
-                  <input
-                    type="checkbox"
-                    checked={reviewerIds.includes(user.id)}
-                    disabled={!isAdmin}
-                    onChange={(event) =>
-                      setDraftReviewerIds((prev) => {
-                        const current = prev ?? reviewerIds;
-                        return event.target.checked
-                          ? Array.from(new Set([...current, user.id]))
-                          : current.filter((id) => id !== user.id);
-                      })
-                    }
-                  />
-                </label>
+                </Button>
               ))}
             </div>
-          </div>
 
-          {!isAdmin ? (
-            <p className="text-xs font-semibold text-on-surface-variant">Only admins can update reviewer assignments.</p>
-          ) : null}
+            <div className="space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Reviewers (company users)</span>
+              <Input
+                value={reviewerSearch}
+                onChange={(event) => setReviewerSearch(event.target.value)}
+                placeholder="Search by name or email"
+                disabled={!isAdmin}
+                className="h-auto min-h-9 rounded-xl py-2"
+              />
+              <div className="max-h-56 space-y-2 overflow-auto rounded-xl border border-outline-variant/20 p-2">
+                {filteredUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 text-sm hover:bg-surface-container-low/40"
+                  >
+                    <Label htmlFor={`reviewer-${user.id}`} className="min-w-0 flex-1 cursor-pointer truncate font-normal">
+                      <span className="font-semibold">{user.full_name || "Unnamed user"}</span>
+                      <span className="ml-2 text-xs text-on-surface-variant">{user.email}</span>
+                    </Label>
+                    <Checkbox
+                      id={`reviewer-${user.id}`}
+                      checked={reviewerIds.includes(user.id)}
+                      disabled={!isAdmin}
+                      onCheckedChange={(checked) =>
+                        setDraftReviewerIds((prev) => {
+                          const current = prev ?? reviewerIds;
+                          return checked === true
+                            ? Array.from(new Set([...current, user.id]))
+                            : current.filter((id) => id !== user.id);
+                        })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={saveWorkflow.isPending || !isAdmin}
-              className="rounded-xl bg-gradient-to-r from-primary to-primary-container px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
-            >
-              {saveWorkflow.isPending ? "Saving..." : "Save Workflow"}
-            </button>
-          </div>
-        </section>
+            {!isAdmin ? (
+              <p className="text-xs font-semibold text-on-surface-variant">Only admins can update reviewer assignments.</p>
+            ) : null}
 
-        <aside className="rounded-2xl border border-outline-variant/20 bg-white p-5 shadow-sm">
-          <h3 className="text-base font-black">Current Policy</h3>
-          <div className="mt-4 space-y-3 text-sm">
-            <div className="rounded-xl bg-surface-container-low/40 p-3">
-              <p className="text-xs text-on-surface-variant">Mode</p>
-              <p className="font-semibold capitalize">{activeMode.replace("_", " ")}</p>
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                disabled={saveWorkflow.isPending || !isAdmin}
+                className="rounded-xl bg-gradient-to-r from-primary to-primary-container font-bold text-primary-foreground"
+              >
+                {saveWorkflow.isPending ? "Saving..." : "Save Workflow"}
+              </Button>
             </div>
-            <div className="rounded-xl bg-surface-container-low/40 p-3">
-              <p className="text-xs text-on-surface-variant">Reviewers</p>
-              <p className="font-semibold">{data?.reviewer_user_ids?.length ?? 0}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-outline-variant/20 bg-white shadow-sm ring-outline-variant/20">
+          <CardContent className="pt-6">
+            <h3 className="text-base font-black">Current Policy</h3>
+            <div className="mt-4 space-y-3 text-sm">
+              <div className="rounded-xl bg-surface-container-low/40 p-3">
+                <p className="text-xs text-on-surface-variant">Mode</p>
+                <p className="font-semibold capitalize">{activeMode.replace("_", " ")}</p>
+              </div>
+              <div className="rounded-xl bg-surface-container-low/40 p-3">
+                <p className="text-xs text-on-surface-variant">Reviewers</p>
+                <p className="font-semibold">{data?.reviewer_user_ids?.length ?? 0}</p>
+              </div>
+              <div className="rounded-xl bg-emerald-500/10 p-3 text-emerald-800">
+                <p className="inline-flex items-center gap-2 text-xs font-bold uppercase">
+                  <ShieldCheck size={14} />
+                  Approval Guard Active
+                </p>
+              </div>
             </div>
-            <div className="rounded-xl bg-emerald-500/10 p-3 text-emerald-800">
-              <p className="inline-flex items-center gap-2 text-xs font-bold uppercase">
-                <ShieldCheck size={14} />
-                Approval Guard Active
-              </p>
-            </div>
-          </div>
-        </aside>
+          </CardContent>
+        </Card>
       </form>
     </PageContainer>
   );

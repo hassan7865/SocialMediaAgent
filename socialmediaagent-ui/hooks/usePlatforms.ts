@@ -13,15 +13,35 @@ export function useGetPlatforms() {
     queryFn: async () => (await api.get<ApiResponse<PlatformConnection[]>>("/api/platforms")).data.data,
   });
 }
+
+type ConnectResponse = { auth_url: string; platform: string };
+
 export function useCreatePlatforms() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (platform: string) => (await api.get(`/api/platforms/callback/${platform}`)).data,
+    mutationFn: async (platform: string) =>
+      (await api.post<ApiResponse<ConnectResponse>>(`/api/platforms/connect/${platform}`)).data,
+    onSuccess: (wrapper) => {
+      const authUrl = wrapper.data?.auth_url;
+      if (authUrl && typeof window !== "undefined") {
+        window.location.href = authUrl;
+        return;
+      }
+      toast.error("No OAuth URL returned. Is POSTFORME_API_KEY set on the API?");
+    },
+    onError: () => toast.error("Could not start Post for Me connection"),
+  });
+}
+
+export function useSyncPlatform() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (platform: string) =>
+      (await api.post<ApiResponse<PlatformConnection>>(`/api/platforms/sync/${platform}`)).data,
     onSuccess: () => {
-      toast.success("Platform connected");
       queryClient.invalidateQueries({ queryKey: queryKeys.platforms.all });
     },
-    onError: () => toast.error("Platform connect failed"),
+    onError: () => toast.error("Could not sync account from Post for Me"),
   });
 }
 export function useUpdatePlatforms() {

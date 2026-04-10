@@ -2,6 +2,7 @@ import Image from "next/image";
 import { MessageCircle, Repeat2, Send, ThumbsUp } from "lucide-react";
 
 import { PreviewPost } from "@/components/previews/types";
+import { Button } from "@/components/ui/button";
 
 interface LinkedinPreviewProps {
   post: PreviewPost;
@@ -28,22 +29,22 @@ export function LinkedinPreview({ post }: LinkedinPreviewProps) {
         </div>
       )}
       <div className="grid grid-cols-4 px-2 py-1">
-        <button className="flex items-center justify-center gap-2 rounded py-2 text-on-surface-variant hover:bg-surface-container-low">
+        <Button type="button" variant="ghost" size="sm" className="h-auto gap-2 py-2 font-bold text-on-surface-variant">
           <ThumbsUp size={16} />
-          <span className="text-xs font-bold">Like</span>
-        </button>
-        <button className="flex items-center justify-center gap-2 rounded py-2 text-on-surface-variant hover:bg-surface-container-low">
+          <span className="text-xs">Like</span>
+        </Button>
+        <Button type="button" variant="ghost" size="sm" className="h-auto gap-2 py-2 font-bold text-on-surface-variant">
           <MessageCircle size={16} />
-          <span className="text-xs font-bold">Comment</span>
-        </button>
-        <button className="flex items-center justify-center gap-2 rounded py-2 text-on-surface-variant hover:bg-surface-container-low">
+          <span className="text-xs">Comment</span>
+        </Button>
+        <Button type="button" variant="ghost" size="sm" className="h-auto gap-2 py-2 font-bold text-on-surface-variant">
           <Repeat2 size={16} />
-          <span className="text-xs font-bold">Repost</span>
-        </button>
-        <button className="flex items-center justify-center gap-2 rounded py-2 text-on-surface-variant hover:bg-surface-container-low">
+          <span className="text-xs">Repost</span>
+        </Button>
+        <Button type="button" variant="ghost" size="sm" className="h-auto gap-2 py-2 font-bold text-on-surface-variant">
           <Send size={16} />
-          <span className="text-xs font-bold">Send</span>
-        </button>
+          <span className="text-xs">Send</span>
+        </Button>
       </div>
     </div>
   );

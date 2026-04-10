@@ -44,5 +44,8 @@ class Post(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
     rejection_reason: Mapped[str | None] = mapped_column(String(500))
     created_by: Mapped[CreatedBy] = mapped_column(Enum(CreatedBy, name="created_by"), nullable=False)
+    external_publish_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    publish_last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    publish_attempted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     company = relationship("Company", lazy="selectin")
