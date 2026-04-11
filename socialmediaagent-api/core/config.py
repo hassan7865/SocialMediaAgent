@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
     FRONTEND_URL: str
+    # Public API base (no trailing slash) for absolute media URLs when publishing; if empty, derived from the upload request.
+    API_PUBLIC_BASE_URL: str = ""
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 14
 

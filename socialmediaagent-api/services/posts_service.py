@@ -1,14 +1,99 @@
-from fastapi import BackgroundTasks
+import uuid
+from datetime import UTC, datetime
+from typing import Any
+
+from fastapi import BackgroundTasks, Request, UploadFile
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.config import get_settings
+from core.paths import POST_MEDIA_DIR, ensure_upload_dirs
 from models.generation_jobs import GenerationJob, JobStatus, JobType
+from models.platform_connections import PlatformConnection, PlatformType
 from models.post_performance import PostPerformance
 from models.posts import ApprovalStatus, CreatedBy, Post, PostStatus
 from models.users import User
 from services import publish_service
 from services.common import paginated_data
 from services.common import get_company_for_user, to_dict
+
+
+def _naive_utc(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
+
+
+def _status_from_schedule(scheduled_at: datetime | None) -> PostStatus:
+    """Draft vs scheduled from local time — future slot means scheduled, past/none means draft."""
+    if scheduled_at is None:
+        return PostStatus.draft
+    when = _naive_utc(scheduled_at)
+    return PostStatus.scheduled if when > datetime.now(UTC) else PostStatus.draft
+
+
+def _sync_status_from_schedule(post: Post) -> None:
+    """Keep draft/scheduled aligned with scheduled_at. Do not override published/failed."""
+    if post.status in (PostStatus.published, PostStatus.failed):
+        return
+    post.status = _status_from_schedule(post.scheduled_at)
+
+
+MAX_POST_IMAGE_BYTES = 10 * 1024 * 1024
+MAX_POST_VIDEO_BYTES = 80 * 1024 * 1024
+
+_ALLOWED_MEDIA_TYPES: dict[str, str] = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+    "video/mp4": ".mp4",
+    "video/webm": ".webm",
+    "video/quicktime": ".mov",
+    "video/x-m4v": ".m4v",
+    "video/ogg": ".ogv",
+}
+
+
+async def _require_active_platform_connection(db: AsyncSession, company_id, platform: PlatformType) -> None:
+    result = await db.execute(
+        select(PlatformConnection).where(
+            PlatformConnection.company_id == company_id,
+            PlatformConnection.platform == platform,
+            PlatformConnection.is_active.is_(True),
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise ValueError(f"Connect {platform.value} under Platforms before creating a post for it.")
+
+
+async def upload_post_media(file: UploadFile, request: Request, db: AsyncSession, user: User) -> dict[str, Any]:
+    company = await get_company_for_user(db, user)
+    if company is None:
+        raise ValueError("Company profile is required")
+    ensure_upload_dirs()
+    content_type = (file.content_type or "").split(";")[0].strip().lower()
+    if content_type not in _ALLOWED_MEDIA_TYPES:
+        raise ValueError(
+            "Unsupported file type. Use an image (JPEG, PNG, WebP, GIF) or a short video (MP4, WebM, MOV, OGV)."
+        )
+    raw = await file.read()
+    max_bytes = MAX_POST_VIDEO_BYTES if content_type.startswith("video/") else MAX_POST_IMAGE_BYTES
+    if len(raw) > max_bytes:
+        kind = "video" if content_type.startswith("video/") else "image"
+        limit_mb = max_bytes // (1024 * 1024)
+        raise ValueError(f"{kind.capitalize()} must be {limit_mb}MB or smaller.")
+    ext = _ALLOWED_MEDIA_TYPES[content_type]
+    filename = f"{uuid.uuid4().hex}{ext}"
+    rel_path = f"post_media/{filename}"
+    dest = POST_MEDIA_DIR / filename
+    dest.write_bytes(raw)
+    settings = get_settings()
+    base = (settings.API_PUBLIC_BASE_URL or "").strip().rstrip("/")
+    if not base:
+        base = str(request.base_url).rstrip("/")
+    url = f"{base}/api/uploads/{rel_path}"
+    return {"url": url}
 
 
 def _post_payload(post: Post):
@@ -64,12 +149,18 @@ async def create_post(payload, db: AsyncSession, user: User):
         raise ValueError("Company profile is required")
     if payload.company_id != company.id:
         raise ValueError("company_id must match your organization")
+    try:
+        platform_enum = PlatformType(payload.platform.lower())
+    except ValueError as e:
+        raise ValueError("Invalid platform") from e
+    await _require_active_platform_connection(db, company.id, platform_enum)
     post = Post(
         company_id=company.id,
-        platform=payload.platform,
+        platform=platform_enum,
         content_text=payload.content_text,
+        media_urls=payload.media_urls,
         scheduled_at=payload.scheduled_at,
-        status=PostStatus.scheduled if payload.scheduled_at else PostStatus.draft,
+        status=_status_from_schedule(payload.scheduled_at),
         approval_status=ApprovalStatus.pending,
         created_by=CreatedBy.human,
     )
@@ -86,6 +177,8 @@ async def update_post(post_id: str, payload, db: AsyncSession, user: User):
         return {"id": post_id}
     for key, value in payload.model_dump(exclude_none=True).items():
         setattr(post, key, value)
+    if post.status not in (PostStatus.published, PostStatus.failed):
+        _sync_status_from_schedule(post)
     await db.commit()
     await db.refresh(post)
     return _post_payload(post)
@@ -111,6 +204,14 @@ async def approve_post(post_id: str, db: AsyncSession, user: User):
         await db.refresh(post)
         await publish_service.try_publish_post_by_id(db, post_id, force_immediate=False)
         await db.refresh(post)
+        # If Post for Me is not configured, reflect schedule locally so UI is not stuck on "draft" alone.
+        settings = get_settings()
+        if not settings.POSTFORME_API_KEY.strip() and post.approval_status == ApprovalStatus.approved:
+            post = await db.get(Post, post_id)
+            if post and not post.external_publish_id and post.status not in (PostStatus.failed, PostStatus.published):
+                _sync_status_from_schedule(post)
+                await db.commit()
+                await db.refresh(post)
         return _post_payload(post)
     raise LookupError("Post not found")
 

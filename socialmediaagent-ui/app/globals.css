@@ -111,6 +111,20 @@
     @apply font-sans;
   }
 
+  /* TipTap editor */
+  .ProseMirror {
+    outline: none;
+  }
+  .tiptap p.is-editor-empty:first-child::before,
+  .ProseMirror p.is-editor-empty:first-child::before,
+  .tiptap p.is-empty::before {
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: var(--muted-foreground);
+    content: attr(data-placeholder);
+  }
+
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   a[href],

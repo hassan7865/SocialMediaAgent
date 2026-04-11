@@ -1,21 +1,52 @@
+import asyncio
 import json
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from core.config import get_settings
+from core.database import AsyncSessionLocal
+from core.paths import UPLOAD_ROOT, ensure_upload_dirs
 from core.logging import RequestLoggingMiddleware
 from core.responses import error_response
 from routers import admin_users, analytics, approval_workflow, auth, brand_voice, calendar, company, health, jobs, platforms, postforme_webhooks, posts
 from services.postforme.client import PostForMeClientError
+from services.publish_service import reconcile_due_scheduled_posts
 
 logger = logging.getLogger("app")
 
 settings = get_settings()
-app = FastAPI(title="SocialMediaAgent API")
+
+
+async def _scheduled_reconcile_loop() -> None:
+    """Poll Post for Me and refresh local rows after *scheduled_at* (webhooks are often missing in dev)."""
+    await asyncio.sleep(5)
+    while True:
+        try:
+            async with AsyncSessionLocal() as db:
+                await reconcile_due_scheduled_posts(db)
+        except Exception:
+            logger.exception("scheduled_reconcile_loop iteration failed")
+        await asyncio.sleep(30)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    task = asyncio.create_task(_scheduled_reconcile_loop())
+    yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
+app = FastAPI(title="SocialMediaAgent API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,6 +70,9 @@ app.include_router(analytics.router)
 app.include_router(jobs.router)
 app.include_router(health.router)
 app.include_router(postforme_webhooks.router)
+
+ensure_upload_dirs()
+app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_ROOT)), name="uploads")
 
 
 @app.exception_handler(RequestValidationError)

@@ -34,6 +34,7 @@ export interface Post {
   company_id: string;
   platform: string;
   content_text: string;
+  media_urls?: string[] | null;
   scheduled_at?: string | null;
   created_at?: string;
   approval_status?: string;

@@ -11,10 +11,11 @@ import { PageContainer, PageHeader } from "@/components/shared/PagePrimitives";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { htmlToPlainText } from "@/lib/post-text";
 import { cn } from "@/lib/utils";
 
 export default function ApprovalQueuePage() {
-  const { canReview } = useAuth();
+  const { user } = useAuth();
   const { data, isLoading, isError } = useGetApprovalQueue();
   const approvePost = useApprovePost();
   const rejectPost = useRejectPost();
@@ -28,11 +29,7 @@ export default function ApprovalQueuePage() {
       <PageHeader
         title="Approval Queue"
         description="Review pending content and approve or reject quickly."
-        actions={
-          !canReview ? (
-            <p className="text-xs font-semibold text-on-surface-variant">Your account has read-only queue access.</p>
-          ) : null
-        }
+        actions={null}
       />
 
       {(data ?? []).length === 0 ? (
@@ -47,7 +44,7 @@ export default function ApprovalQueuePage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">{item.platform}</p>
-                    <p className="mt-1 text-sm leading-relaxed">{item.content_text}</p>
+                    <p className="mt-1 text-sm leading-relaxed">{htmlToPlainText(item.content_text)}</p>
                     <p className="mt-2 inline-flex items-center gap-1 text-xs text-on-surface-variant">
                       <Clock3 size={12} />
                       {item.scheduled_at ? `Scheduled ${new Date(item.scheduled_at).toLocaleString()}` : "No schedule"}
@@ -62,7 +59,7 @@ export default function ApprovalQueuePage() {
                     value={rejectReasons[item.id] ?? ""}
                     onChange={(e) => setRejectReasons((prev) => ({ ...prev, [item.id]: e.target.value }))}
                     placeholder="Rejection reason (optional)"
-                    disabled={!canReview}
+                    disabled={!user}
                     className={cn("h-auto min-h-9 rounded-xl py-2 md:col-span-2")}
                   />
                   <div className="flex gap-2">
@@ -71,7 +68,7 @@ export default function ApprovalQueuePage() {
                       variant="default"
                       className="flex-1 gap-1 rounded-xl font-bold"
                       onClick={() => approvePost.mutate(item.id)}
-                      disabled={approvePost.isPending || !canReview}
+                      disabled={approvePost.isPending || !user}
                     >
                       <CheckCircle2 size={14} />
                       Approve
@@ -86,7 +83,7 @@ export default function ApprovalQueuePage() {
                           reason: rejectReasons[item.id] || "Rejected in approval queue",
                         })
                       }
-                      disabled={rejectPost.isPending || !canReview}
+                      disabled={rejectPost.isPending || !user}
                     >
                       <CircleSlash size={14} />
                       Reject

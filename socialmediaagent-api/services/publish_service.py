@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
+import re
 from datetime import UTC, datetime
+from html import unescape
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,9 +18,19 @@ from services.postforme.client import PostForMeClient, PostForMeClientError
 from services.postforme.platform_map import to_pfm_platform
 from services.postforme.schemas import CreateSocialPostBody, SocialPostMediaItem
 
+logger = logging.getLogger("app")
+
+
+def _strip_html(text: str) -> str:
+    if not text:
+        return ""
+    t = re.sub(r"<[^>]+>", " ", text)
+    t = unescape(t)
+    return " ".join(t.split()).strip()
+
 
 def _build_caption(post: Post) -> str:
-    text = (post.content_text or "").strip()
+    text = _strip_html((post.content_text or "").strip())
     tags = post.hashtags or []
     if not tags:
         return text
@@ -37,14 +50,19 @@ def _media_from_post(post: Post) -> list[SocialPostMediaItem] | None:
 
 
 def _apply_pfm_status_to_post(post: Post, pfm_status: str, *, now: datetime) -> None:
-    if pfm_status == "processed":
+    s = (pfm_status or "").lower()
+    if s in ("processed", "published", "completed", "success"):
         post.status = PostStatus.published
         post.published_at = now
-    elif pfm_status == "scheduled":
+    elif s in ("failed", "error"):
+        post.status = PostStatus.failed
+        if not post.publish_last_error:
+            post.publish_last_error = f"Post for Me status: {pfm_status}"
+    elif s == "scheduled":
         post.status = PostStatus.scheduled
-    elif pfm_status == "processing":
+    elif s == "processing":
         post.status = PostStatus.scheduled
-    elif pfm_status == "draft":
+    elif s == "draft":
         post.status = PostStatus.draft
 
 
@@ -168,3 +186,54 @@ async def try_publish_for_user_post(db: AsyncSession, post_id: str, user, *, for
     if not post or not company or post.company_id != company.id:
         return None
     return await try_publish_post(db, post, force_immediate=force_immediate)
+
+
+async def reconcile_due_scheduled_posts(db: AsyncSession) -> None:
+    """Background reconciliation: posts stuck in *scheduled* after *scheduled_at* has passed.
+
+    - **With Post for Me**: poll remote post status (webhooks may be missing in local/dev).
+    - **Without PFM**: realign local draft/scheduled from *scheduled_at* so the UI does not stay on *scheduled* forever.
+    """
+    settings = get_settings()
+    now = datetime.now(UTC)
+    result = await db.execute(
+        select(Post).where(
+            Post.status == PostStatus.scheduled,
+            Post.approval_status == ApprovalStatus.approved,
+            Post.scheduled_at.is_not(None),
+            Post.scheduled_at <= now,
+        )
+    )
+    posts = result.scalars().all()
+    if not posts:
+        return
+
+    if not settings.POSTFORME_API_KEY.strip():
+        from services.posts_service import _sync_status_from_schedule
+
+        for post in posts:
+            _sync_status_from_schedule(post)
+        await db.commit()
+        return
+
+    client = PostForMeClient(settings.POSTFORME_API_BASE, settings.POSTFORME_API_KEY)
+
+    for post in posts:
+        try:
+            if post.external_publish_id:
+                remote = await client.get_social_post(post.external_publish_id)
+                _apply_pfm_status_to_post(post, remote.status, now=now)
+                post.publish_last_error = None
+                await db.commit()
+            else:
+                await try_publish_post(db, post, force_immediate=True)
+        except PostForMeClientError as e:
+            await db.rollback()
+            logger.warning(
+                "reconcile_scheduled_post pfm_error post_id=%s err=%s",
+                post.id,
+                (e.body or str(e))[:300],
+            )
+        except Exception:
+            await db.rollback()
+            logger.exception("reconcile_scheduled_post failed post_id=%s", post.id)

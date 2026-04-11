@@ -28,6 +28,25 @@ async def test_create_social_account_auth_url():
 
 
 @pytest.mark.asyncio
+async def test_get_social_post():
+    with respx.mock:
+        respx.get("https://api.postforme.dev/v1/social-posts/pfm_123").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "id": "pfm_123",
+                    "status": "processed",
+                    "caption": "hi",
+                },
+            )
+        )
+        client = PostForMeClient("https://api.postforme.dev", "k")
+        out = await client.get_social_post("pfm_123")
+        assert out.id == "pfm_123"
+        assert out.status == "processed"
+
+
+@pytest.mark.asyncio
 async def test_create_social_post_error_raises():
     with respx.mock:
         respx.post("https://api.postforme.dev/v1/social-posts").mock(return_value=httpx.Response(400, text="bad"))

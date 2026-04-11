@@ -74,6 +74,11 @@ class PostForMeClient:
             model=SocialPostDto,
         )
 
+    async def get_social_post(self, post_id: str) -> SocialPostDto:
+        """Fetch current status from Post for Me (used to sync after scheduled publish time)."""
+        safe_id = post_id.strip()
+        return await self._request("GET", f"/v1/social-posts/{safe_id}", model=SocialPostDto)
+
     async def disconnect_social_account(self, social_account_id: str) -> None:
         r = await self._request_raw("POST", f"/v1/social-accounts/{social_account_id}/disconnect", json_body={})
         if r.status_code >= 400:

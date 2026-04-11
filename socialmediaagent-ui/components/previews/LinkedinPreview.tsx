@@ -1,6 +1,7 @@
-import Image from "next/image";
 import { MessageCircle, Repeat2, Send, ThumbsUp } from "lucide-react";
 
+import { PreviewHtmlContent } from "@/components/previews/PreviewHtmlContent";
+import { PreviewMediaGallery } from "@/components/previews/PreviewMediaGallery";
 import { PreviewPost } from "@/components/previews/types";
 import { Button } from "@/components/ui/button";
 
@@ -9,6 +10,7 @@ interface LinkedinPreviewProps {
 }
 
 export function LinkedinPreview({ post }: LinkedinPreviewProps) {
+  const items = post.mediaItems ?? [];
   return (
     <div className="w-full max-w-[480px] overflow-hidden rounded-lg border border-outline-variant/20 bg-white shadow-sm transition-all hover:shadow-md">
       <div className="flex gap-3 p-4">
@@ -20,14 +22,15 @@ export function LinkedinPreview({ post }: LinkedinPreviewProps) {
         </div>
       </div>
       <div className="px-4 pb-3 text-sm leading-relaxed text-on-surface">
-        <p>{post.content}</p>
-        <p className="mt-3 font-semibold text-primary">{post.hashtags.join(" ")}</p>
+        <PreviewHtmlContent html={post.content} />
       </div>
-      {post.imageUrl && (
-        <div className="relative h-[240px] bg-surface-container-low">
-          <Image alt="Post media" src={post.imageUrl} fill className="object-cover" />
-        </div>
-      )}
+      {items.length > 0 ? (
+        <PreviewMediaGallery
+          items={items}
+          layout="stack"
+          stackItemClassName={items.length > 1 ? "h-[200px]" : "h-[240px]"}
+        />
+      ) : null}
       <div className="grid grid-cols-4 px-2 py-1">
         <Button type="button" variant="ghost" size="sm" className="h-auto gap-2 py-2 font-bold text-on-surface-variant">
           <ThumbsUp size={16} />

@@ -1,8 +1,8 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.responses import success_response
-from dependencies.auth import get_current_user, require_reviewer_or_admin
+from dependencies.auth import get_current_user
 from dependencies.db import get_db
 from dependencies.pagination import PaginationParams, get_pagination_params
 from models.users import User
@@ -10,6 +10,20 @@ from schemas.posts import PostCreate, PostUpdate
 from services import posts_service
 
 router = APIRouter(prefix="/api/posts", tags=["posts"], dependencies=[Depends(get_current_user)])
+
+
+@router.post("/upload-media")
+async def upload_post_media(
+    request: Request,
+    file: UploadFile,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        data = await posts_service.upload_post_media(file, request, db, current_user)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    return success_response("Media uploaded", data)
 
 
 @router.get("")
@@ -46,7 +60,7 @@ async def delete_post(post_id: str, db: AsyncSession = Depends(get_db), current_
 
 
 @router.post("/{post_id}/approve")
-async def approve_post(post_id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(require_reviewer_or_admin)):
+async def approve_post(post_id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         data = await posts_service.approve_post(post_id, db, current_user)
     except LookupError as e:
@@ -55,7 +69,7 @@ async def approve_post(post_id: str, db: AsyncSession = Depends(get_db), current
 
 
 @router.post("/{post_id}/reject")
-async def reject_post(post_id: str, reason: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(require_reviewer_or_admin)):
+async def reject_post(post_id: str, reason: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         data = await posts_service.reject_post(post_id, reason, db, current_user)
     except LookupError as e:

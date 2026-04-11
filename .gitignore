@@ -20,6 +20,9 @@ out/
 coverage/
 *.tsbuildinfo
 
+# API uploads (post images, etc.)
+socialmediaagent-api/uploads/
+
 # Python
 __pycache__/
 *.py[cod]
