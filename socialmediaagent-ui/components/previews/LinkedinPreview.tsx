@@ -18,7 +18,7 @@ export function LinkedinPreview({ post }: LinkedinPreviewProps) {
         <div className="flex-1">
           <p className="text-sm font-bold leading-none">{post.authorName}</p>
           <p className="mt-0.5 text-[11px] leading-tight text-on-surface-variant">{post.authorRole}</p>
-          <p className="text-[10px] text-on-surface-variant/70">1m - Public</p>
+
         </div>
       </div>
       <div className="px-4 pb-3 text-sm leading-relaxed text-on-surface">

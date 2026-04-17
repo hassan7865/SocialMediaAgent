@@ -133,12 +133,12 @@ export function RegisterForm() {
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-4 sm:px-6 lg:flex-row lg:px-8">
           <div className="text-lg font-bold text-on-surface">SocialAgent</div>
           <div className="flex flex-wrap justify-center gap-8">
-            <Link href="#" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant transition-opacity hover:text-primary">Privacy Policy</Link>
-            <Link href="#" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant transition-opacity hover:text-primary">Terms of Service</Link>
-            <Link href="#" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant transition-opacity hover:text-primary">Help Center</Link>
-            <Link href="#" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant transition-opacity hover:text-primary">Contact</Link>
+            <Link href="/privacy-policy" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant transition-opacity hover:text-primary">Privacy Policy</Link>
+            <Link href="/terms-of-service" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant transition-opacity hover:text-primary">Terms of Service</Link>
+            <Link href="/help-center" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant transition-opacity hover:text-primary">Help Center</Link>
+            <Link href="/contact" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant transition-opacity hover:text-primary">Contact</Link>
           </div>
-          <p className="text-xs font-medium uppercase tracking-widest text-on-surface-variant">© 2024 SocialAgent. The Editorial Workspace.</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-on-surface-variant">© 2026 SocialAgent. The Editorial Workspace.</p>
         </div>
       </footer>
     </div>

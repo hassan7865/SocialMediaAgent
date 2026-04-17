@@ -16,7 +16,7 @@ export function TwitterPreview({ post }: TwitterPreviewProps) {
         <div className="h-10 w-10 rounded-full bg-surface-container-low" />
         <div>
           <p className="text-sm font-bold">{post.authorName}</p>
-          <p className="text-xs text-on-surface-variant">@socialagent</p>
+
         </div>
       </div>
       <PreviewHtmlContent html={post.content} className="text-on-surface" />

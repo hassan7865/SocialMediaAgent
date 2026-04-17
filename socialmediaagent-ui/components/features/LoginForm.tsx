@@ -106,12 +106,12 @@ export function LoginForm() {
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-4 sm:px-6 lg:flex-row lg:px-8">
           <div className="text-lg font-bold text-on-surface">SocialAgent</div>
           <div className="mb-6 flex flex-wrap justify-center gap-8 md:mb-0">
-            <Link href="#" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant opacity-80 transition-opacity hover:text-primary hover:opacity-100">Privacy Policy</Link>
-            <Link href="#" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant opacity-80 transition-opacity hover:text-primary hover:opacity-100">Terms of Service</Link>
-            <Link href="#" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant opacity-80 transition-opacity hover:text-primary hover:opacity-100">Help Center</Link>
-            <Link href="#" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant opacity-80 transition-opacity hover:text-primary hover:opacity-100">Contact</Link>
+            <Link href="/privacy-policy" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant opacity-80 transition-opacity hover:text-primary hover:opacity-100">Privacy Policy</Link>
+            <Link href="/terms-of-service" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant opacity-80 transition-opacity hover:text-primary hover:opacity-100">Terms of Service</Link>
+            <Link href="/help-center" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant opacity-80 transition-opacity hover:text-primary hover:opacity-100">Help Center</Link>
+            <Link href="/contact" className="text-xs font-medium uppercase tracking-widest text-on-surface-variant opacity-80 transition-opacity hover:text-primary hover:opacity-100">Contact</Link>
           </div>
-          <div className="text-xs font-medium uppercase tracking-widest text-on-surface-variant">© 2024 SocialAgent. The Editorial Workspace.</div>
+          <div className="text-xs font-medium uppercase tracking-widest text-on-surface-variant">© 2026 SocialAgent. The Editorial Workspace.</div>
         </div>
       </footer>
     </div>
