@@ -49,6 +49,20 @@ class CreateSocialPostBody(BaseModel):
     isDraft: bool | None = False
 
 
+class SocialPostMetrics(BaseModel):
+    model_config = {"extra": "ignore"}
+
+    views: int | None = None
+    impressions: int | None = None
+    reach: int | None = None
+    likes: int | None = None
+    comments: int | None = None
+    shares: int | None = None
+    saves: int | None = None
+    clicks: int | None = None
+    engagement_rate: float | None = None
+
+
 class SocialPostDto(BaseModel):
     model_config = {"extra": "ignore"}
 
@@ -57,3 +71,23 @@ class SocialPostDto(BaseModel):
     caption: str = ""
     status: str
     scheduled_at: str | None = None
+    metrics: SocialPostMetrics | None = None
+
+
+class SocialFeedItem(BaseModel):
+    model_config = {"extra": "ignore"}
+
+    id: str
+    caption: str | None = None
+    platform: str | None = None
+    social_account_id: str | None = None
+    posted_at: str | None = None
+    external_id: str | None = None
+    metrics: SocialPostMetrics | None = None
+
+
+class SocialFeedResponse(BaseModel):
+    model_config = {"extra": "ignore"}
+
+    data: list[SocialFeedItem] = Field(default_factory=list)
+    meta: PaginatedMeta | None = None

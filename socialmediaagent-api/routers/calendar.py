@@ -4,7 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.responses import success_response
-from dependencies.auth import get_current_user, require_reviewer_or_admin
+from dependencies.auth import get_current_user
 from dependencies.db import get_db
 from models.users import User
 from schemas.calendar import CalendarGenerateCreate, CalendarUpdate
@@ -24,8 +24,8 @@ async def generate_calendar(payload: CalendarGenerateCreate, background_tasks: B
 
 
 @router.post("/approve-all")
-async def approve_all(db: AsyncSession = Depends(get_db), current_user: User = Depends(require_reviewer_or_admin)):
-    return success_response("Calendar approvals processed", await calendar_service.approve_all(db, current_user))
+async def approve_all(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return success_response("Calendar weeks updated", await calendar_service.approve_all(db, current_user))
 
 
 @router.patch("/{calendar_id}")

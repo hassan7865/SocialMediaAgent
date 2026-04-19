@@ -4,7 +4,6 @@ from fastapi import BackgroundTasks, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.companies import Company
-from models.company_users import CompanyUser
 from models.generation_jobs import GenerationJob, JobStatus, JobType
 from models.users import User
 from services.common import get_company_for_user, to_dict
@@ -42,8 +41,6 @@ async def create_company_profile(payload, db: AsyncSession, user: User):
     else:
         company = Company(user_id=user.id, **payload.model_dump(exclude_none=True))
         db.add(company)
-        await db.flush()
-        db.add(CompanyUser(company_id=company.id, user_id=user.id))
     await db.commit()
     await db.refresh(company)
     return _company_payload(company)

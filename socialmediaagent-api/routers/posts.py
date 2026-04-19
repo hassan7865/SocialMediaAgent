@@ -59,24 +59,6 @@ async def delete_post(post_id: str, db: AsyncSession = Depends(get_db), current_
     return success_response("Post deleted", await posts_service.delete_post(post_id, db, current_user))
 
 
-@router.post("/{post_id}/approve")
-async def approve_post(post_id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    try:
-        data = await posts_service.approve_post(post_id, db, current_user)
-    except LookupError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
-    return success_response("Post approved", data)
-
-
-@router.post("/{post_id}/reject")
-async def reject_post(post_id: str, reason: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    try:
-        data = await posts_service.reject_post(post_id, reason, db, current_user)
-    except LookupError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
-    return success_response("Post rejected", data)
-
-
 @router.post("/{post_id}/publish-now")
 async def publish_now(post_id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:

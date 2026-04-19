@@ -179,7 +179,7 @@ function CompanyProfileForm({ data }: { data: Company | null | undefined }) {
             <Button
               type="submit"
               disabled={isSaving}
-              className="rounded-xl bg-gradient-to-r from-primary to-primary-container px-5 py-2.5 text-sm font-bold text-primary-foreground"
+              className="rounded-xl bg-gradient-to-r from-primary to-primary-container bg-clip-padding px-5 py-2.5 text-sm font-bold text-primary-foreground"
             >
               {isSaving ? "Saving..." : submitLabel}
             </Button>
@@ -197,10 +197,18 @@ export default function CompanyPage() {
   if (isError) return <div className="p-4 text-sm text-destructive sm:p-6">Unable to load company profile.</div>;
 
   return (
-    <PageContainer className="max-w-4xl">
+    <PageContainer>
       <PageHeader
         title="Company Profile"
         description="Set up your company details so posts, calendar, and generation features work correctly."
+        badge={
+          <p className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            Company
+          </p>
+        }
       />
 
       <CompanyProfileForm key={data?.id ?? "new-company"} data={data} />

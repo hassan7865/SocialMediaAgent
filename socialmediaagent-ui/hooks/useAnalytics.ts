@@ -65,3 +65,11 @@ export function useDeleteAnalytics() {
     onError: () => toast.error("Fetch failed"),
   });
 }
+export function useSyncPostMetrics() {
+  return useMutation({
+    mutationFn: async () => (await api.post("/api/analytics/sync-metrics")).data,
+    onSuccess: (data) =>
+      toast.success(`Synced ${data.data?.synced || 0} post metrics from Post for Me`),
+    onError: () => toast.error("Failed to sync post metrics"),
+  });
+}

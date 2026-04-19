@@ -15,6 +15,6 @@ export interface User {
   id: string;
   email: string;
   full_name: string | null;
-  role: "admin" | "user";
-  can_review: boolean;
+  /** True when this user owns the company row (`companies.user_id`). */
+  is_company_owner: boolean;
 }

@@ -16,8 +16,10 @@ export function useGetPlatforms() {
 
 type ConnectResponse = { auth_url: string; platform: string };
 
-export function useCreatePlatforms() {
+export function useCreatePlatforms(platform?: string) {
+  const key = platform ? ["connect-platform", platform] : ["connect-platform"];
   return useMutation({
+    mutationKey: key,
     mutationFn: async (platform: string) =>
       (await api.post<ApiResponse<ConnectResponse>>(`/api/platforms/connect/${platform}`)).data,
     onSuccess: (wrapper) => {

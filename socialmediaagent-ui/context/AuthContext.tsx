@@ -9,8 +9,8 @@ import { ApiResponse, User } from "@/types/api";
 
 interface AuthContextValue {
   user: User | null;
-  isAdmin: boolean;
-  canReview: boolean;
+  /** Same as API: owns `companies.user_id` (User Access + sidebar admin links). */
+  isCompanyOwner: boolean;
   isLoading: boolean;
   logout: () => Promise<void>;
 }
@@ -31,8 +31,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const value = useMemo<AuthContextValue>(
     () => ({
       user: data ?? null,
-      isAdmin: (data?.role ?? "user") === "admin",
-      canReview: (data?.role ?? "user") === "admin" || Boolean(data?.can_review),
+      isCompanyOwner: Boolean(data?.is_company_owner),
       isLoading,
       logout: async () => {
         await api.post("/api/auth/logout");

@@ -31,7 +31,7 @@ export function useUpdateCalendar() {
 export function useDeleteCalendar() {
   return useMutation({
     mutationFn: async () => (await api.post("/api/calendar/approve-all")).data,
-    onSuccess: () => toast.success("Calendar approved"),
-    onError: () => toast.error("Approve all failed"),
+    onSuccess: () => toast.success("Calendar drafts updated"),
+    onError: () => toast.error("Bulk calendar update failed"),
   });
 }

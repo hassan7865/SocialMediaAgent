@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_settings
 from core.security import create_token, hash_password, verify_password
+from models.companies import Company
 from models.users import User
 from schemas.auth import LoginCreate, RegisterCreate, UserResponse
 
@@ -54,5 +55,13 @@ def clear_auth_cookies(response: Response) -> None:
     response.delete_cookie("refresh_token", path="/", secure=secure, samesite="lax")
 
 
+async def user_me_payload(user: User, db: AsyncSession) -> dict:
+    data = UserResponse.model_validate(user).model_dump(mode="json")
+    r = await db.execute(select(Company).where(Company.user_id == user.id))
+    data["is_company_owner"] = r.scalar_one_or_none() is not None
+    return data
+
+
 def serialize_user(user: User) -> dict:
+    """Sync serialization (e.g. tests); prefer user_me_payload when DB is available."""
     return UserResponse.model_validate(user).model_dump(mode="json")

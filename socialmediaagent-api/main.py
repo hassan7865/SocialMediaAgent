@@ -14,30 +14,43 @@ from core.database import AsyncSessionLocal
 from core.paths import UPLOAD_ROOT, ensure_upload_dirs
 from core.logging import RequestLoggingMiddleware
 from core.responses import error_response
-from routers import admin_users, analytics, approval_workflow, auth, brand_voice, calendar, company, health, jobs, platforms, postforme_webhooks, posts
+from routers import (
+    admin_users,
+    ai,
+    analytics,
+    auth,
+    brand_voice,
+    calendar,
+    company,
+    health,
+    jobs,
+    platforms,
+    postforme_webhooks,
+    posts,
+)
 from services.postforme.client import PostForMeClientError
-from services.publish_service import reconcile_due_scheduled_posts
+from services.publish_service import publish_due_scheduled_posts
+
 
 logger = logging.getLogger("app")
 
 settings = get_settings()
 
 
-async def _scheduled_reconcile_loop() -> None:
-    """Poll Post for Me and refresh local rows after *scheduled_at* (webhooks are often missing in dev)."""
-    await asyncio.sleep(5)
-    while True:
-        try:
-            async with AsyncSessionLocal() as db:
-                await reconcile_due_scheduled_posts(db)
-        except Exception:
-            logger.exception("scheduled_reconcile_loop iteration failed")
-        await asyncio.sleep(30)
-
-
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    task = asyncio.create_task(_scheduled_reconcile_loop())
+    # Start background task to publish due scheduled posts
+    async def scheduled_publish_loop():
+        await asyncio.sleep(10)  # Wait for app to start
+        while True:
+            try:
+                async with AsyncSessionLocal() as db:
+                    await publish_due_scheduled_posts(db)
+            except Exception:
+                logger.exception("scheduled_publish_loop iteration failed")
+            await asyncio.sleep(60)  # Check every minute
+
+    task = asyncio.create_task(scheduled_publish_loop())
     yield
     task.cancel()
     try:
@@ -58,26 +71,28 @@ app.add_middleware(
 app.add_middleware(RequestLoggingMiddleware)
 
 app.include_router(auth.router)
-app.include_router(admin_users.router)
 app.include_router(company.router)
 app.include_router(brand_voice.router)
 app.include_router(platforms.router)
 app.include_router(posts.router)
 app.include_router(calendar.router)
-app.include_router(approval_workflow.workflow_router)
-app.include_router(approval_workflow.queue_router)
 app.include_router(analytics.router)
 app.include_router(jobs.router)
 app.include_router(health.router)
 app.include_router(postforme_webhooks.router)
+app.include_router(ai.router)
 
 ensure_upload_dirs()
 app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_ROOT)), name="uploads")
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
-    return JSONResponse(status_code=422, content=error_response("Validation error", exc.errors()))
+async def validation_exception_handler(
+    _request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=422, content=error_response("Validation error", exc.errors())
+    )
 
 
 @app.exception_handler(HTTPException)
@@ -102,7 +117,9 @@ def _map_postforme_upstream_status(upstream: int) -> int:
 
 
 @app.exception_handler(PostForMeClientError)
-async def postforme_client_error_handler(_request: Request, exc: PostForMeClientError) -> JSONResponse:
+async def postforme_client_error_handler(
+    _request: Request, exc: PostForMeClientError
+) -> JSONResponse:
     message = str(exc)
     if exc.body:
         try:
@@ -113,7 +130,9 @@ async def postforme_client_error_handler(_request: Request, exc: PostForMeClient
             pass
     upstream = exc.status_code or 0
     status = _map_postforme_upstream_status(upstream)
-    logger.warning("postforme_upstream_error http=%s mapped=%s %s", upstream, status, message[:400])
+    logger.warning(
+        "postforme_upstream_error http=%s mapped=%s %s", upstream, status, message[:400]
+    )
     return JSONResponse(
         status_code=status,
         content=error_response(message, {"upstream_status": upstream}),
@@ -121,5 +140,9 @@ async def postforme_client_error_handler(_request: Request, exc: PostForMeClient
 
 
 @app.exception_handler(Exception)
-async def unhandled_exception_handler(_request: Request, _exc: Exception) -> JSONResponse:
-    return JSONResponse(status_code=500, content=error_response("Internal server error"))
+async def unhandled_exception_handler(
+    _request: Request, _exc: Exception
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=500, content=error_response("Internal server error")
+    )

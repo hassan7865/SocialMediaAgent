@@ -89,31 +89,3 @@ export function useDeletePosts() {
   });
 }
 
-export function useApprovePost() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => (await api.post(`/api/posts/${id}/approve`)).data,
-    onSuccess: () => {
-      toast.success("Post approved");
-      queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.approval.queue });
-    },
-    onError: () => toast.error("Post approve failed"),
-  });
-}
-
-export function useRejectPost() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) =>
-      (await api.post(`/api/posts/${id}/reject`, null, { params: { reason } })).data,
-    onSuccess: () => {
-      toast.success("Post rejected");
-      queryClient.invalidateQueries({ queryKey: queryKeys.posts.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.approval.queue });
-    },
-    onError: () => toast.error("Post reject failed"),
-  });
-}

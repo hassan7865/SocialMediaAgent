@@ -9,12 +9,16 @@ from services.postforme.schemas import (
     CreateSocialPostBody,
     SocialAccountProviderAuthUrlDto,
     SocialAccountsListResponse,
+    SocialFeedItem,
+    SocialFeedResponse,
     SocialPostDto,
 )
 
 
 class PostForMeClientError(Exception):
-    def __init__(self, message: str, status_code: int | None = None, body: str | None = None):
+    def __init__(
+        self, message: str, status_code: int | None = None, body: str | None = None
+    ):
         super().__init__(message)
         self.status_code = status_code
         self.body = body
@@ -45,7 +49,12 @@ class PostForMeClient:
         body: dict = {"platform": platform, "external_id": external_id}
         if permissions is not None:
             body["permissions"] = permissions
-        return await self._request("POST", "/v1/social-accounts/auth-url", json_body=body, model=SocialAccountProviderAuthUrlDto)
+        return await self._request(
+            "POST",
+            "/v1/social-accounts/auth-url",
+            json_body=body,
+            model=SocialAccountProviderAuthUrlDto,
+        )
 
     async def list_social_accounts(
         self,
@@ -64,7 +73,12 @@ class PostForMeClient:
         if status:
             for s in status:
                 params.append(("status", s))
-        return await self._request("GET", "/v1/social-accounts", params=params, model=SocialAccountsListResponse)
+        return await self._request(
+            "GET",
+            "/v1/social-accounts",
+            params=params,
+            model=SocialAccountsListResponse,
+        )
 
     async def create_social_post(self, body: CreateSocialPostBody) -> SocialPostDto:
         return await self._request(
@@ -77,10 +91,36 @@ class PostForMeClient:
     async def get_social_post(self, post_id: str) -> SocialPostDto:
         """Fetch current status from Post for Me (used to sync after scheduled publish time)."""
         safe_id = post_id.strip()
-        return await self._request("GET", f"/v1/social-posts/{safe_id}", model=SocialPostDto)
+        return await self._request(
+            "GET", f"/v1/social-posts/{safe_id}", model=SocialPostDto
+        )
+
+    async def get_social_account_feed(
+        self,
+        social_account_id: str,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        expand_metrics: bool = True,
+    ) -> SocialFeedResponse:
+        """Fetch feed for a social account, optionally with metrics."""
+        params: list[tuple[str, str]] = [
+            ("limit", str(limit)),
+            ("offset", str(offset)),
+        ]
+        if expand_metrics:
+            params.append(("expand", "metrics"))
+        return await self._request(
+            "GET",
+            f"/v1/social-account-feeds/{social_account_id}",
+            params=params,
+            model=SocialFeedResponse,
+        )
 
     async def disconnect_social_account(self, social_account_id: str) -> None:
-        r = await self._request_raw("POST", f"/v1/social-accounts/{social_account_id}/disconnect", json_body={})
+        r = await self._request_raw(
+            "POST", f"/v1/social-accounts/{social_account_id}/disconnect", json_body={}
+        )
         if r.status_code >= 400:
             raise PostForMeClientError(
                 f"Post for Me disconnect error: {r.status_code}",
@@ -98,7 +138,9 @@ class PostForMeClient:
     ) -> httpx.Response:
         url = f"{self._base}{path}"
         async with httpx.AsyncClient(timeout=45.0) as client:
-            r = await client.request(method, url, headers=self._headers(), json=json_body, params=params)
+            r = await client.request(
+                method, url, headers=self._headers(), json=json_body, params=params
+            )
             return r
 
     async def _request(

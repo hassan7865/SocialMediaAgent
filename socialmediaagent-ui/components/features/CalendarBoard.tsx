@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { PreviewPostMedia } from "@/components/previews/PreviewPostMedia";
 import { PostRichTextEditor } from "@/components/features/PostRichTextEditor";
 import { useGetCalendar } from "@/hooks/useCalendar";
-import { useApprovePost, useDeletePosts, useGetPosts, useUpdatePosts, useUploadPostMedia } from "@/hooks/usePosts";
+import { useDeletePosts, useGetPosts, useUpdatePosts, useUploadPostMedia } from "@/hooks/usePosts";
 import { AppLoader } from "@/components/shared/AppLoader";
 import { PageContainer, PageHeader } from "@/components/shared/PagePrimitives";
 import { Button } from "@/components/ui/button";
@@ -27,10 +27,9 @@ type CalendarPost = {
   /** Plain text for calendar cards and read-only preview. */
   previewPlain: string;
   rawStatus: string;
-  /** Combined publishing + approval state for the badge. */
+  /** Publishing state for the badge. */
   displayLabel: string;
   displayTone: "success" | "warning" | "danger" | "default" | "muted";
-  approvalStatus: string;
   publishLastError?: string | null;
   platform: "LinkedIn" | "Twitter/X" | "Instagram" | "Facebook";
   borderColor: string;
@@ -51,16 +50,15 @@ function urlsToEditMedia(urls: string[]): EditMediaItem[] {
   return urls.map((url) => ({ id: url, url, type: mediaTypeFromUrl(url) }));
 }
 
-/** Maps API `status` + `approval_status` to one clear calendar label. */
+/** Maps API `status` to one clear calendar label. */
 function calendarDisplay(item: Post): { label: string; tone: CalendarPost["displayTone"] } {
   const st = item.status;
-  const ap = item.approval_status ?? "pending";
   if (st === "failed") return { label: "Publish failed", tone: "danger" };
   if (st === "published") return { label: "Published", tone: "success" };
   if (st === "scheduled") return { label: "Scheduled", tone: "default" };
-  if (ap === "pending") return { label: "Pending approval", tone: "warning" };
-  if (ap === "rejected") return { label: "Rejected", tone: "danger" };
-  return { label: "Approved", tone: "muted" };
+  if (st === "expired") return { label: "Expired", tone: "warning" };
+  if (st === "paused") return { label: "Paused", tone: "muted" };
+  return { label: "Draft", tone: "default" };
 }
 
 function calendarBadgeClass(tone: CalendarPost["displayTone"]) {
@@ -107,7 +105,6 @@ export function CalendarBoard() {
   const { data: postsData, isLoading, isError } = useGetPosts();
   const updatePost = useUpdatePosts();
   const deletePost = useDeletePosts();
-  const approvePost = useApprovePost();
   const uploadMedia = useUploadPostMedia();
 
   const dayHeaders = useMemo(
@@ -133,7 +130,6 @@ export function CalendarBoard() {
           rawStatus: item.status,
           displayLabel: disp.label,
           displayTone: disp.tone,
-          approvalStatus: item.approval_status ?? "pending",
           publishLastError: item.publish_last_error,
           platform: platformLabel(item.platform),
           borderColor: platformBorder(item.platform),
@@ -166,6 +162,14 @@ export function CalendarBoard() {
           <PageHeader
             title="Content Calendar"
             description={`${format(currentWeekStart, "MMM d")} - ${format(addDays(currentWeekStart, 6), "MMM d, yyyy")}`}
+            badge={
+              <p className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Calendar
+              </p>
+            }
             actions={
               <div className="flex gap-2">
                 <Button
@@ -457,17 +461,6 @@ export function CalendarBoard() {
               }}
             >
               Delete
-            </Button>
-            <Button
-              type="button"
-              className="rounded-xl bg-gradient-to-r from-primary to-primary-container py-3 text-sm font-bold text-primary-foreground"
-              disabled={!activePost || approvePost.isPending || activePost.approvalStatus === "approved"}
-              onClick={async () => {
-                if (!activePost) return;
-                await approvePost.mutateAsync(activePost.id);
-              }}
-            >
-              {activePost?.approvalStatus === "approved" ? "Approved" : "Approve"}
             </Button>
           </div>
       </aside>

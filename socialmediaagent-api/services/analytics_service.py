@@ -1,12 +1,17 @@
+from datetime import UTC, datetime
+from typing import Any
+
 from fastapi import BackgroundTasks
 from sqlalchemy import extract, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.platform_connections import PlatformType
+from core.config import get_settings
+from models.platform_connections import PlatformConnection, PlatformType
 from models.post_performance import PostPerformance
 from models.posts import Post
 from models.users import User
 from services.common import get_company_for_user
+from services.postforme.client import PostForMeClient
 
 
 async def summary(db: AsyncSession, user: User):
@@ -21,7 +26,9 @@ async def summary(db: AsyncSession, user: User):
             "monthly_change_pct": 0,
             "weekly_reach": 0,
         }
-    total_posts_q = await db.execute(select(func.count()).select_from(Post).where(Post.company_id == company.id))
+    total_posts_q = await db.execute(
+        select(func.count()).select_from(Post).where(Post.company_id == company.id)
+    )
     total_posts = int(total_posts_q.scalar_one() or 0)
     avg_eng_q = await db.execute(
         select(func.avg(PostPerformance.engagement_rate))
@@ -41,27 +48,37 @@ async def summary(db: AsyncSession, user: User):
     month_q = await db.execute(
         select(func.count())
         .select_from(Post)
-        .where(Post.company_id == company.id, extract("month", Post.created_at) == extract("month", func.now()))
+        .where(
+            Post.company_id == company.id,
+            extract("month", Post.created_at) == extract("month", func.now()),
+        )
     )
     previous_month_q = await db.execute(
         select(func.count())
         .select_from(Post)
         .where(
             Post.company_id == company.id,
-            extract("month", Post.created_at) == extract("month", func.now() - text("interval '1 month'")),
-            extract("year", Post.created_at) == extract("year", func.now() - text("interval '1 month'")),
+            extract("month", Post.created_at)
+            == extract("month", func.now() - text("interval '1 month'")),
+            extract("year", Post.created_at)
+            == extract("year", func.now() - text("interval '1 month'")),
         )
     )
     weekly_reach_q = await db.execute(
         select(func.coalesce(func.sum(PostPerformance.reach), 0))
         .select_from(PostPerformance)
         .join(Post, Post.id == PostPerformance.post_id)
-        .where(Post.company_id == company.id, Post.created_at >= func.now() - text("interval '7 days'"))
+        .where(
+            Post.company_id == company.id,
+            Post.created_at >= func.now() - text("interval '7 days'"),
+        )
     )
     this_month_count = int(month_q.scalar_one() or 0)
     previous_month_count = int(previous_month_q.scalar_one() or 0)
     monthly_change_pct = (
-        round(((this_month_count - previous_month_count) / previous_month_count) * 100, 2)
+        round(
+            ((this_month_count - previous_month_count) / previous_month_count) * 100, 2
+        )
         if previous_month_count > 0
         else (100.0 if this_month_count > 0 else 0.0)
     )
@@ -93,7 +110,11 @@ async def engagement(days: int, db: AsyncSession, user: User):
         .limit(max(1, days // 7))
     )
     series = [
-        {"bucket": row.bucket.isoformat() if row.bucket else None, "platform": row.platform.value, "value": float(row.engagement or 0)}
+        {
+            "bucket": row.bucket.isoformat() if row.bucket else None,
+            "platform": row.platform.value,
+            "value": float(row.engagement or 0),
+        }
         for row in rows
     ]
     return {"series": series}
@@ -135,7 +156,10 @@ async def posting_heatmap(db: AsyncSession, user: User):
         .where(Post.company_id == company.id)
         .group_by("dow", "hour")
     )
-    matrix = [{"dow": int(row.dow), "hour": int(row.hour), "count": int(row.count)} for row in rows]
+    matrix = [
+        {"dow": int(row.dow), "hour": int(row.hour), "count": int(row.count)}
+        for row in rows
+    ]
     return {"matrix": matrix}
 
 
@@ -155,7 +179,13 @@ async def platform_breakdown(db: AsyncSession, user: User):
         .group_by(Post.platform)
     )
     return [
-        {"platform": row.platform.value if isinstance(row.platform, PlatformType) else str(row.platform), "count": int(row.count), "share": round(int(row.count) * 100 / total, 2)}
+        {
+            "platform": row.platform.value
+            if isinstance(row.platform, PlatformType)
+            else str(row.platform),
+            "count": int(row.count),
+            "share": round(int(row.count) * 100 / total, 2),
+        }
         for row in rows
     ]
 
@@ -163,3 +193,102 @@ async def platform_breakdown(db: AsyncSession, user: User):
 async def sync_analytics(background_tasks: BackgroundTasks, *_args, **_kwargs):
     background_tasks.add_task(lambda: None)
     return {"queued": True}
+
+
+async def sync_post_metrics_from_postforme(
+    db: AsyncSession,
+    post: Post,
+    platform_connection: PlatformConnection,
+) -> PostPerformance | None:
+    """Fetch and store post metrics from Post for Me for a specific post."""
+    settings = get_settings()
+    if not settings.POSTFORME_API_KEY.strip():
+        return None
+
+    client = PostForMeClient(settings.POSTFORME_API_BASE, settings.POSTFORME_API_KEY)
+
+    try:
+        feed = await client.get_social_account_feed(
+            platform_connection.account_id or "",
+            limit=100,
+            offset=0,
+            expand_metrics=True,
+        )
+    except Exception:
+        return None
+
+    for item in feed.data:
+        if item.external_id == str(post.id):
+            m = item.metrics
+            if m is None:
+                return None
+
+            existing = await db.execute(
+                select(PostPerformance).where(
+                    PostPerformance.post_id == post.id,
+                    PostPerformance.platform == post.platform,
+                )
+            )
+            if existing.scalar_one_or_none():
+                return None
+
+            perf = PostPerformance(
+                post_id=post.id,
+                platform=post.platform,
+                likes=m.likes or 0,
+                comments=m.comments or 0,
+                shares=m.shares or 0,
+                clicks=m.clicks or 0,
+                impressions=m.impressions or m.views or 0,
+                reach=m.reach or 0,
+                engagement_rate=m.engagement_rate or 0.0,
+                fetched_at=datetime.now(UTC),
+            )
+            db.add(perf)
+            await db.commit()
+            await db.refresh(perf)
+            return perf
+
+    return None
+
+
+async def sync_all_post_metrics(db: AsyncSession, user: User) -> dict[str, Any]:
+    """Sync metrics for all published posts from Post for Me."""
+    settings = get_settings()
+    if not settings.POSTFORME_API_KEY.strip():
+        return {"synced": 0, "errors": 0}
+
+    company = await get_company_for_user(db, user)
+    if company is None:
+        return {"synced": 0, "errors": 0}
+
+    posts_result = await db.execute(
+        select(Post).where(
+            Post.company_id == company.id,
+            Post.external_publish_id.is_not(None),
+        )
+    )
+    posts = posts_result.scalars().all()
+
+    connections_result = await db.execute(
+        select(PlatformConnection).where(
+            PlatformConnection.company_id == company.id,
+            PlatformConnection.is_active.is_(True),
+        )
+    )
+    connections = {c.platform: c for c in connections_result.scalars().all()}
+
+    synced = 0
+    errors = 0
+
+    for post in posts:
+        conn = connections.get(post.platform)
+        if conn:
+            try:
+                result = await sync_post_metrics_from_postforme(db, post, conn)
+                if result:
+                    synced += 1
+            except Exception:
+                errors += 1
+
+    return {"synced": synced, "errors": errors}

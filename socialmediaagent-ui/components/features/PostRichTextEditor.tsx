@@ -16,7 +16,7 @@ import {
   Underline as UnderlineIcon,
   Undo2,
 } from "lucide-react";
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,7 @@ const extensions = [
     HTMLAttributes: { class: "text-primary underline", rel: "noopener noreferrer", target: "_blank" },
   }),
   Placeholder.configure({
-    placeholder: "Write your post… Use the toolbar for bold, lists, and links.",
+    placeholder: "Start writing your post or use the AI Assistant to generate content...",
   }),
 ];
 
@@ -41,6 +41,21 @@ interface PostRichTextEditorProps {
   onChange: (html: string) => void;
   className?: string;
   editorClassName?: string;
+}
+
+function isEditorHtmlEmpty(html: string): boolean {
+  const t = (html ?? "").trim();
+  return (
+    t === "" ||
+    t === "<p></p>" ||
+    t === "<p><br></p>" ||
+    t === '<p><br class="ProseMirror-trailingBreak"></p>'
+  );
+}
+
+function editorHtmlEquivalent(a: string, b: string): boolean {
+  if (a === b) return true;
+  return isEditorHtmlEmpty(a) && isEditorHtmlEmpty(b);
 }
 
 function EditorToolbarButton({
@@ -70,23 +85,38 @@ function EditorToolbarButton({
 }
 
 export function PostRichTextEditor({ content, onChange, className, editorClassName }: PostRichTextEditorProps) {
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions,
-    content,
-    editorProps: {
+  // Do not pass `content` into useEditor: TipTap calls setOptions on every render when options differ.
+  // Streaming updates would re-apply the full document on each frame (and fight useEffect). Sync via effect below.
+  const editorProps = useMemo(
+    () => ({
       attributes: {
         class: cn(
           "tiptap ProseMirror min-h-[240px] max-h-[min(60vh,520px)] overflow-y-auto rounded-2xl border-none bg-white px-6 py-5 text-base leading-relaxed shadow-[0px_20px_40px_rgba(21,28,39,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-          "prose-editor [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_p]:mb-2 [&_p:last-child]:mb-0",
+          "prose-editor [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2:first-child]:mt-0 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mb-1.5 [&_h3]:mt-3 [&_h3:first-child]:mt-0 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_p]:mb-2 [&_p:last-child]:mb-0",
           editorClassName,
         ),
       },
-    },
+    }),
+    [editorClassName],
+  );
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions,
+    content: "",
+    editorProps,
     onUpdate: ({ editor: ed }) => {
       onChange(ed.getHTML());
     },
   });
+
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    const next = content ?? "";
+    const current = editor.getHTML();
+    if (editorHtmlEquivalent(current, next)) return;
+    editor.commands.setContent(next, { emitUpdate: false });
+  }, [content, editor]);
 
   if (!editor) {
     return (

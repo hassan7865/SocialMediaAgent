@@ -1,10 +1,10 @@
-"""Send approved posts to Post for Me."""
+"""Send posts to Post for Me. Status updates are handled via webhooks and background publish checks."""
 
 from __future__ import annotations
 
 import logging
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from html import unescape
 
 from sqlalchemy import select
@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_settings
 from models.platform_connections import PlatformConnection, PlatformType
-from models.posts import ApprovalStatus, Post, PostStatus
+from models.posts import Post, PostStatus
 from services.common import get_company_for_user
 from services.postforme.client import PostForMeClient, PostForMeClientError
 from services.postforme.platform_map import to_pfm_platform
@@ -83,7 +83,9 @@ async def _resolve_social_account_ids(
     )
     accounts = [a for a in listing.data if (a.status or "connected") == "connected"]
     if not accounts:
-        raise ValueError(f"No connected Post for Me account for platform {platform.value}. Connect the platform first.")
+        raise ValueError(
+            f"No connected Post for Me account for platform {platform.value}. Connect the platform first."
+        )
 
     if preferred_account_id:
         for a in accounts:
@@ -100,9 +102,6 @@ async def try_publish_post(
 ) -> Post | None:
     settings = get_settings()
     if not settings.POSTFORME_API_KEY.strip():
-        return None
-
-    if post.approval_status != ApprovalStatus.approved:
         return None
 
     if post.external_publish_id:
@@ -173,14 +172,18 @@ async def try_publish_post(
     return post
 
 
-async def try_publish_post_by_id(db: AsyncSession, post_id: str, *, force_immediate: bool = False) -> Post | None:
+async def try_publish_post_by_id(
+    db: AsyncSession, post_id: str, *, force_immediate: bool = False
+) -> Post | None:
     post = await db.get(Post, post_id)
     if post is None:
         return None
     return await try_publish_post(db, post, force_immediate=force_immediate)
 
 
-async def try_publish_for_user_post(db: AsyncSession, post_id: str, user, *, force_immediate: bool = False) -> Post | None:
+async def try_publish_for_user_post(
+    db: AsyncSession, post_id: str, user, *, force_immediate: bool = False
+) -> Post | None:
     company = await get_company_for_user(db, user)
     post = await db.get(Post, post_id)
     if not post or not company or post.company_id != company.id:
@@ -188,52 +191,59 @@ async def try_publish_for_user_post(db: AsyncSession, post_id: str, user, *, for
     return await try_publish_post(db, post, force_immediate=force_immediate)
 
 
-async def reconcile_due_scheduled_posts(db: AsyncSession) -> None:
-    """Background reconciliation: posts stuck in *scheduled* after *scheduled_at* has passed.
+async def publish_due_scheduled_posts(db: AsyncSession) -> int:
+    """Find and publish scheduled posts that are due (scheduled_at <= now).
 
-    - **With Post for Me**: poll remote post status (webhooks may be missing in local/dev).
-    - **Without PFM**: realign local draft/scheduled from *scheduled_at* so the UI does not stay on *scheduled* forever.
+    Also marks posts as expired if scheduled time has passed significantly.
+    Returns the count of posts that were published.
     """
     settings = get_settings()
     now = datetime.now(UTC)
-    result = await db.execute(
+
+    # First, mark posts as expired if they're significantly past scheduled time (> 2 hours)
+    expired_threshold = now - timedelta(hours=2)
+    expired_result = await db.execute(
         select(Post).where(
             Post.status == PostStatus.scheduled,
-            Post.approval_status == ApprovalStatus.approved,
             Post.scheduled_at.is_not(None),
-            Post.scheduled_at <= now,
+            Post.scheduled_at < expired_threshold,
+            Post.external_publish_id.is_(None),
         )
     )
-    posts = result.scalars().all()
-    if not posts:
-        return
+    expired_posts = expired_result.scalars().all()
+    for post in expired_posts:
+        post.status = PostStatus.expired
+        post.publish_last_error = "Scheduled time passed without being published"
+    if expired_posts:
+        await db.commit()
+        logger.info("Marked %d posts as expired", len(expired_posts))
 
     if not settings.POSTFORME_API_KEY.strip():
-        from services.posts_service import _sync_status_from_schedule
+        return 0
 
-        for post in posts:
-            _sync_status_from_schedule(post)
-        await db.commit()
-        return
+    # Find posts that are due for publishing (within 2 hours of scheduled time)
+    due_result = await db.execute(
+        select(Post).where(
+            Post.status == PostStatus.scheduled,
+            Post.scheduled_at.is_not(None),
+            Post.scheduled_at <= now,
+            Post.scheduled_at >= expired_threshold,
+        )
+    )
+    posts = due_result.scalars().all()
+    if not posts:
+        return 0
 
-    client = PostForMeClient(settings.POSTFORME_API_BASE, settings.POSTFORME_API_KEY)
-
+    published_count = 0
     for post in posts:
+        if post.external_publish_id:
+            continue
         try:
-            if post.external_publish_id:
-                remote = await client.get_social_post(post.external_publish_id)
-                _apply_pfm_status_to_post(post, remote.status, now=now)
-                post.publish_last_error = None
-                await db.commit()
-            else:
-                await try_publish_post(db, post, force_immediate=True)
-        except PostForMeClientError as e:
-            await db.rollback()
-            logger.warning(
-                "reconcile_scheduled_post pfm_error post_id=%s err=%s",
-                post.id,
-                (e.body or str(e))[:300],
-            )
+            await try_publish_post(db, post, force_immediate=True)
+            published_count += 1
         except Exception:
-            await db.rollback()
-            logger.exception("reconcile_scheduled_post failed post_id=%s", post.id)
+            logger.exception(
+                "publish_due_scheduled_posts failed for post_id=%s", post.id
+            )
+
+    return published_count

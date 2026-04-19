@@ -50,7 +50,6 @@ export default function HelpCenter() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>• Post scheduling best practices</li>
                 <li>• Bulk scheduling and drafts</li>
-                <li>• Approval workflows</li>
                 <li>• Publishing across platforms</li>
               </ul>
             </div>
@@ -123,10 +122,10 @@ export default function HelpCenter() {
             </div>
 
             <div className="border-b border-outline-variant/20 pb-6">
-              <h3 className="text-lg font-semibold text-foreground mb-2">How does the approval workflow work?</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2">How does post scheduling work?</h3>
               <p className="text-muted-foreground">
-                If your organization has approval workflows enabled, posts created by team members will be sent for review before publishing.
-                Approvers will receive notifications and can approve, reject, or request changes to posts before they go live.
+                Posts are automatically published at their scheduled time. If a scheduled time passes without being published,
+                the post will be marked as expired. You can always reschedule expired posts to try again.
               </p>
             </div>
 

@@ -20,5 +20,4 @@ class UserResponse(BaseModel):
     id: UUID
     email: EmailStr
     full_name: str | None = None
-    role: str
-    can_review: bool
+    is_company_owner: bool = False

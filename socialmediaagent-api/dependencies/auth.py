@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.security import decode_token
 from dependencies.db import get_db
-from models.users import User, UserRole
+from models.companies import Company
+from models.users import User
 
 
 async def get_current_user(
@@ -26,13 +27,15 @@ async def get_current_user(
     return user
 
 
-def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != UserRole.admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+async def require_company_owner(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """User must own the company row (`companies.user_id`). Company members without ownership use the app but not /api/admin/users."""
+    result = await db.execute(select(Company).where(Company.user_id == current_user.id))
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Company owner access required",
+        )
     return current_user
-
-
-def require_reviewer_or_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role == UserRole.admin or current_user.can_review:
-        return current_user
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Reviewer permission required")

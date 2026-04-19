@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, ChartNoAxesColumn, Building2, Workflow, PenSquare, Sparkles, Settings } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { CalendarDays, ChartNoAxesColumn, Building2, Workflow, PenSquare, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const baseLinks = [
@@ -12,7 +11,6 @@ const baseLinks = [
   { href: "/platforms", label: "Platforms", icon: Workflow },
   { href: "/posts", label: "Posts", icon: PenSquare },
   { href: "/calendar", label: "Content Calendar", icon: CalendarDays },
-  { href: "/approval-workflow", label: "Approval", icon: Workflow },
   { href: "/analytics", label: "Reports", icon: ChartNoAxesColumn },
 ];
 
@@ -23,8 +21,7 @@ type AppSidebarProps = {
 
 export function AppSidebar({ className, onNavigate }: AppSidebarProps) {
   const pathname = usePathname();
-  const { isAdmin } = useAuth();
-  const links = isAdmin ? [...baseLinks, { href: "/admin/users", label: "User Access", icon: Settings }] : baseLinks;
+  const links = baseLinks;
 
   return (
     <aside

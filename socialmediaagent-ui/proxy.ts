@@ -7,8 +7,6 @@ const protectedPaths = [
   "/platforms",
   "/posts",
   "/calendar",
-  "/approval-workflow",
-  "/approval-queue",
   "/analytics",
 ];
 
@@ -23,5 +21,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/company/:path*", "/brand-voice/:path*", "/platforms/:path*", "/posts/:path*", "/calendar/:path*", "/approval-workflow/:path*", "/approval-queue/:path*", "/analytics/:path*"],
+  matcher: ["/company/:path*", "/brand-voice/:path*", "/platforms/:path*", "/posts/:path*", "/calendar/:path*", "/analytics/:path*"],
 };

@@ -1,12 +1,12 @@
 from datetime import UTC, datetime
 
-from fastapi import BackgroundTasks, HTTPException, status
+from fastapi import BackgroundTasks
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.content_calendar import CalendarStatus, ContentCalendar
 from models.generation_jobs import GenerationJob, JobStatus, JobType
-from models.users import User, UserRole
+from models.users import User
 from services.common import get_company_for_user, to_dict
 
 
@@ -85,8 +85,6 @@ async def update_calendar(calendar_id: str, payload, db: AsyncSession, user: Use
         return {"id": calendar_id}
     if payload.status is not None:
         requested_status = CalendarStatus(payload.status)
-        if requested_status in {CalendarStatus.approved, CalendarStatus.live} and user.role != UserRole.admin and not user.can_review:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Reviewer permission required")
         if requested_status == CalendarStatus.approved:
             calendar.approved_by = user.id
         calendar.status = requested_status

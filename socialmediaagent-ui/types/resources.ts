@@ -12,10 +12,7 @@ export interface Company {
 }
 
 export interface BrandVoice {
-  formality_level: number;
-  style: string;
-  persona_prompt: string;
-  sample_approved_posts?: string[] | null;
+  tone: string;
 }
 
 export interface PlatformConnection {
@@ -37,7 +34,6 @@ export interface Post {
   media_urls?: string[] | null;
   scheduled_at?: string | null;
   created_at?: string;
-  approval_status?: string;
   status: string;
   external_publish_id?: string | null;
   publish_last_error?: string | null;
@@ -59,17 +55,11 @@ export interface Job {
   started_at?: string | null;
 }
 
-export interface ApprovalWorkflow {
-  mode: string;
-  reviewer_user_ids: string[];
-}
-
 export interface AdminUser {
   id: string;
   email: string;
   full_name: string | null;
-  role: "admin" | "user";
-  can_review: boolean;
+  is_company_owner: boolean;
   created_at?: string;
   updated_at?: string;
 }

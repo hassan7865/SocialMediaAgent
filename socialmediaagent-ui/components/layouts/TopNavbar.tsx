@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Bell, ChevronDown, LogOut, Menu, Search } from "lucide-react";
+import { ChevronDown, LogOut, Menu, Search } from "lucide-react";
 
 import { AppSidebar } from "@/components/layouts/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
 
 export function TopNavbar() {
-  const { user, isAdmin, canReview, logout } = useAuth();
+  const { user, isCompanyOwner, logout } = useAuth();
 
-  const roleLabel = useMemo(() => {
-    if (isAdmin) return "Admin";
-    if (canReview) return "Reviewer";
-    return "User";
-  }, [canReview, isAdmin]);
+  const accountLabel = useMemo(() => (isCompanyOwner ? "Company owner" : "Team member"), [isCompanyOwner]);
 
   return (
     <header className="fixed top-0 right-0 left-0 z-40 flex h-16 items-center justify-between bg-background/80 px-4 backdrop-blur-xl sm:px-6 lg:left-[240px] lg:px-8">
@@ -48,18 +44,13 @@ export function TopNavbar() {
         </div>
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
-        <Button type="button" variant="ghost" size="icon-sm" className="relative rounded-full">
-          <Bell className="h-5 w-5 text-on-surface-variant" />
-          <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive" />
-          <span className="sr-only">Notifications</span>
-        </Button>
         <div className="mx-1 hidden h-8 w-px bg-outline-variant/20 sm:mx-2 sm:block" />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="ghost" className="gap-2 rounded-xl px-2 sm:gap-3">
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-bold leading-tight">{user?.full_name || user?.email || "User"}</p>
-                <p className="text-[10px] font-medium text-on-surface-variant">{roleLabel}</p>
+                <p className="text-[10px] font-medium text-on-surface-variant">{accountLabel}</p>
               </div>
               <ChevronDown className="h-4 w-4 text-on-surface-variant" />
             </Button>

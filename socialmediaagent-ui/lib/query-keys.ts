@@ -18,10 +18,6 @@ export const queryKeys = {
   calendar: {
     all: ["calendar"] as const,
   },
-  approval: {
-    workflow: ["approval-workflow"] as const,
-    queue: ["approval-queue"] as const,
-  },
   admin: {
     users: ["admin", "users"] as const,
   },

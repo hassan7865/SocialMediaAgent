@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     POSTFORME_API_KEY: str = ""
     POSTFORME_WEBHOOK_SECRET: str = ""
 
+    GROQ_API_KEY: str = ""
+
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+
     @field_validator("POSTFORME_API_BASE", mode="after")
     @classmethod
     def normalize_postforme_base(cls, v: str) -> str:

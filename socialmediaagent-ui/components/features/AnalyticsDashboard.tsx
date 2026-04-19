@@ -3,18 +3,15 @@
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ArrowUpRight, ChartNoAxesColumn, FileText, Sparkles, Trophy } from "lucide-react";
-import { formatDistanceToNow, parseISO } from "date-fns";
 
 import {
   useGetAnalytics,
   useGetAnalyticsBreakdown,
   useGetAnalyticsEngagement,
   useGetAnalyticsHeatmap,
-  useGetAnalyticsTopPosts,
 } from "@/hooks/useAnalytics";
 import { AppLoader } from "@/components/shared/AppLoader";
 import { PageContainer, PageHeader } from "@/components/shared/PagePrimitives";
-import { Button } from "@/components/ui/button";
 
 const heatmapRows = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const heatmapCols = ["12a", "2a", "4a", "6a", "8a", "10a", "12p", "2p", "4p", "6p", "8p", "10p"];
@@ -22,7 +19,6 @@ const heatmapCols = ["12a", "2a", "4a", "6a", "8a", "10a", "12p", "2p", "4p", "6
 export function AnalyticsDashboard() {
   const summary = useGetAnalytics();
   const engagement = useGetAnalyticsEngagement();
-  const topPosts = useGetAnalyticsTopPosts();
   const heatmap = useGetAnalyticsHeatmap();
   const breakdown = useGetAnalyticsBreakdown();
 
@@ -66,6 +62,14 @@ export function AnalyticsDashboard() {
       <PageHeader
         title="Performance Insights"
         description={`Your content reached ${weeklyReachLabel} people this week.`}
+        badge={
+          <p className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Reports
+          </p>
+        }
       />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
@@ -144,55 +148,29 @@ export function AnalyticsDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
-        <div className="space-y-6 lg:col-span-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold tracking-tight">Best Performing Posts</h3>
-            <Button type="button" variant="link" className="h-auto p-0 text-xs font-bold">
-              View All
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {(topPosts.data ?? []).map((post) => (
-              <div key={post.title} className="flex items-center gap-4 rounded-xl bg-surface-container-low/40 p-4 transition-all hover:-translate-y-0.5 hover:bg-surface-container-low hover:shadow-sm">
-                <div className="h-10 w-10 rounded-lg bg-white shadow-sm" />
-                <div className="min-w-0 flex-1">
-                  <h4 className="truncate text-sm font-semibold">{post.title}</h4>
-                  <p className="text-[10px] font-medium text-on-surface-variant">
-                    {post.platform} - {formatDistanceToNow(parseISO(post.created_at), { addSuffix: true })}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold text-primary">{post.engagement_rate.toFixed(2)}%</div>
-                  <p className="text-[10px] text-on-surface-variant">Engagement</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="lg:col-span-3">
+      <div className="grid grid-cols-1 gap-8">
+        <div>
           <div className="h-full rounded-[12px] border border-outline-variant/20 bg-surface-container-lowest p-4 shadow-[0px_12px_30px_rgba(21,28,39,0.04)] sm:p-6 lg:p-8">
             <h3 className="mb-6 text-lg font-bold tracking-tight">Optimal Posting Times</h3>
             <div className="flex gap-4">
               <div className="flex flex-col justify-between py-1 text-[9px] font-bold uppercase tracking-tight text-on-surface-variant">
                 {heatmapRows.map((day) => (
-                  <span key={day} className="h-9 leading-9">{day}</span>
+                  <span key={day} className="h-10 leading-10">{day}</span>
                 ))}
               </div>
               <div className="flex-1">
-                <div className="grid grid-cols-12 gap-1.5">
+                <div className="grid grid-cols-12 gap-1">
                   {heatmapValues.flatMap((row, rowIdx) =>
                     row.map((val, colIdx) => (
                       <div
                         key={`${rowIdx}-${colIdx}`}
-                        className="h-8 rounded-[2px] bg-primary"
+                        className="h-10 rounded-md bg-primary"
                         style={{ opacity: Math.max(0.1, val / 100) }}
                       />
                     )),
                   )}
                 </div>
-                <div className="mt-4 grid grid-cols-12 text-center text-[9px] font-bold uppercase text-on-surface-variant/60">
+                <div className="mt-6 grid grid-cols-12 text-center text-[9px] font-bold uppercase text-on-surface-variant/60">
                   {heatmapCols.map((label) => (
                     <span key={label}>{label}</span>
                   ))}
@@ -212,7 +190,7 @@ export function AnalyticsDashboard() {
           </div>
         </div>
       </div>
-      {(summary.isLoading || engagement.isLoading || topPosts.isLoading || heatmap.isLoading || breakdown.isLoading) ? (
+      {(summary.isLoading || engagement.isLoading || heatmap.isLoading || breakdown.isLoading) ? (
         <AppLoader label="Loading analytics data..." />
       ) : null}
     </PageContainer>

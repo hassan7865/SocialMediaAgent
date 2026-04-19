@@ -10,18 +10,22 @@ from dependencies.auth import get_current_user
 from dependencies.db import get_db
 from models.users import User
 from schemas.auth import LoginCreate, RegisterCreate
-from services.auth_service import clear_auth_cookies, issue_auth_cookies, login_user, register_user, serialize_user
+from services.auth_service import clear_auth_cookies, issue_auth_cookies, login_user, register_user, user_me_payload
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 settings = get_settings()
 
 
 @router.post("/register")
-async def register(payload: RegisterCreate, db: AsyncSession = Depends(get_db)): return success_response("Registered", serialize_user(await register_user(payload, db)))
+async def register(payload: RegisterCreate, db: AsyncSession = Depends(get_db)):
+    user = await register_user(payload, db)
+    return success_response("Registered", await user_me_payload(user, db))
 
 
 @router.post("/login")
-async def login(payload: LoginCreate, response: Response, db: AsyncSession = Depends(get_db)): return success_response("Logged in", serialize_user(await login_user(payload, db, response)))
+async def login(payload: LoginCreate, response: Response, db: AsyncSession = Depends(get_db)):
+    user = await login_user(payload, db, response)
+    return success_response("Logged in", await user_me_payload(user, db))
 
 
 @router.post("/logout")
@@ -43,4 +47,5 @@ async def refresh(response: Response, refresh_token: str | None = Cookie(default
 
 
 @router.get("/me")
-async def me(current_user: User = Depends(get_current_user)): return success_response("Current user", serialize_user(current_user))
+async def me(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return success_response("Current user", await user_me_payload(current_user, db))

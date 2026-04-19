@@ -1,52 +1,76 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { Check, Sparkles, Briefcase, Coffee, HandHeart, Volume2, Wand2, SparklesIcon } from "lucide-react";
 
 import { useCreateBrandVoice, useGetBrandVoice, useUpdateBrandVoice } from "@/hooks/useBrandVoice";
 import type { BrandVoice } from "@/types/resources";
 import { AppLoader } from "@/components/shared/AppLoader";
 import { PageContainer, PageHeader } from "@/components/shared/PagePrimitives";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
-const STYLE_OPTIONS = [
-  { value: "expert", label: "Expert" },
-  { value: "community", label: "Community" },
-  { value: "story", label: "Story" },
-  { value: "data", label: "Data" },
+const TONE_OPTIONS = [
+  { 
+    value: "professional", 
+    label: "Professional", 
+    icon: Briefcase,
+    iconColor: "text-blue-600",
+    bgColor: "bg-blue-50",
+    description: "Formal, polished, authoritative for business content" 
+  },
+  { 
+    value: "casual", 
+    label: "Casual", 
+    icon: Coffee,
+    iconColor: "text-amber-600",
+    bgColor: "bg-amber-50",
+    description: "Relaxed, informal, friendly and approachable" 
+  },
+  { 
+    value: "friendly", 
+    label: "Friendly", 
+    icon: HandHeart,
+    iconColor: "text-pink-600",
+    bgColor: "bg-pink-50",
+    description: "Warm, supportive, and personable" 
+  },
+  { 
+    value: "authoritative", 
+    label: "Authoritative", 
+    icon: Volume2,
+    iconColor: "text-purple-600",
+    bgColor: "bg-purple-50",
+    description: "Confident, knowledgeable, commanding" 
+  },
+  { 
+    value: "humorous", 
+    label: "Humorous", 
+    icon: Wand2,
+    iconColor: "text-orange-600",
+    bgColor: "bg-orange-50",
+    description: "Witty, playful, entertaining" 
+  },
+  { 
+    value: "inspirational", 
+    label: "Inspirational", 
+    icon: SparklesIcon,
+    iconColor: "text-cyan-600",
+    bgColor: "bg-cyan-50",
+    description: "Uplifting, motivational, aspirational" 
+  },
 ] as const;
 
 function BrandVoiceForm({ data }: { data: BrandVoice | null | undefined }) {
   const createBrandVoice = useCreateBrandVoice();
   const updateBrandVoice = useUpdateBrandVoice();
-  const [style, setStyle] = useState(data?.style ?? "expert");
+  const [tone, setTone] = useState(data?.tone ?? "professional");
 
   const isSaving = createBrandVoice.isPending || updateBrandVoice.isPending;
   const hasProfile = Boolean(data);
 
-  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const payload = {
-      style: String(formData.get("style") ?? "expert"),
-      formality_level: Number(formData.get("formality_level") ?? 3),
-      persona_prompt: String(formData.get("persona_prompt") ?? "").trim(),
-      sample_approved_posts: String(formData.get("sample_approved_posts") ?? "")
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean),
-    };
-    if (!payload.persona_prompt) return;
+  const onSubmit = async () => {
+    const payload = { tone };
     if (hasProfile) {
       await updateBrandVoice.mutateAsync(payload);
       return;
@@ -55,147 +79,132 @@ function BrandVoiceForm({ data }: { data: BrandVoice | null | undefined }) {
   };
 
   return (
-    <Card className="border-outline-variant/20 bg-white shadow-sm ring-outline-variant/20">
-      <CardContent className="pt-6">
-        <form onSubmit={onSubmit} className="space-y-5">
-          <input type="hidden" name="style" value={style} readOnly aria-hidden />
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="brand-style" className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                Voice Style
-              </Label>
-              <Select value={style} onValueChange={setStyle}>
-                <SelectTrigger id="brand-style" className="h-auto min-h-9 w-full rounded-xl py-2">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STYLE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="formality_level" className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                Formality Level (1-5)
-              </Label>
-              <Input
-                id="formality_level"
-                type="number"
-                name="formality_level"
-                min={1}
-                max={5}
-                defaultValue={data?.formality_level ?? 3}
-                className="h-auto min-h-9 rounded-xl py-2"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="persona_prompt" className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-              Persona Prompt *
-            </Label>
-            <Textarea
-              id="persona_prompt"
-              name="persona_prompt"
-              defaultValue={data?.persona_prompt ?? ""}
-              rows={6}
-              placeholder="Describe tone, writing rules, dos/don'ts, and editorial perspective..."
-              className="min-h-[140px] rounded-xl"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="sample_approved_posts" className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-              Sample Approved Posts (one per line)
-            </Label>
-            <Textarea
-              id="sample_approved_posts"
-              name="sample_approved_posts"
-              defaultValue={(data?.sample_approved_posts ?? []).join("\n")}
-              rows={5}
-              placeholder="Add examples of approved content for style grounding..."
-              className="min-h-[120px] rounded-xl"
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={isSaving}
-              className="rounded-xl bg-gradient-to-r from-primary to-primary-container px-5 py-2.5 text-sm font-bold text-primary-foreground"
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-outline-variant/20 bg-white p-6 shadow-sm">
+        <h3 className="text-lg font-bold text-on-surface mb-1">Choose Your Brand Tone</h3>
+        <p className="text-sm text-on-surface-variant mb-6">Select the voice that best represents your brand for AI-generated content.</p>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {TONE_OPTIONS.map((opt) => {
+            const IconComponent = opt.icon;
+            return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setTone(opt.value)}
+              className={cn(
+                "relative flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all duration-200",
+                tone === opt.value
+                  ? "border-primary bg-primary/5 shadow-md"
+                  : "border-outline-variant/30 bg-white hover:border-primary/50 hover:bg-surface-container-low"
+              )}
             >
-              {isSaving ? "Saving..." : hasProfile ? "Update Brand Voice" : "Create Brand Voice"}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+              <div className={cn("p-2 rounded-lg", opt.bgColor)}>
+                <IconComponent className={cn("w-5 h-5", opt.iconColor)} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className={cn(
+                  "block font-semibold",
+                  tone === opt.value ? "text-primary" : "text-on-surface"
+                )}>
+                  {opt.label}
+                </span>
+                <span className="text-xs text-on-surface-variant line-clamp-2">
+                  {opt.description}
+                </span>
+              </div>
+              {tone === opt.value && (
+                <Check className="absolute top-3 right-3 h-5 w-5 text-primary" />
+              )}
+            </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Button
+          onClick={onSubmit}
+          disabled={isSaving}
+          className="rounded-xl bg-gradient-to-r from-primary to-primary-container bg-clip-padding px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 hover:shadow-lg"
+        >
+          {isSaving ? "Saving..." : hasProfile ? "Update Tone" : "Save Tone"}
+        </Button>
+      </div>
+    </div>
   );
 }
 
 export default function BrandVoicePage() {
   const { data, isLoading, isError } = useGetBrandVoice();
 
-  const formalityText = useMemo(() => {
-    const level = data?.formality_level ?? 3;
-    if (level <= 2) return "Casual";
-    if (level === 3) return "Balanced";
-    return "Formal";
-  }, [data?.formality_level]);
+  if (isLoading) return <AppLoader label="Loading brand voice..." />;
+  if (isError) return <div className="p-4 text-sm text-destructive sm:p-6">Unable to load brand voice.</div>;
 
-  if (isLoading) return <AppLoader label="Loading brand voice profile..." />;
-  if (isError) return <div className="p-4 text-sm text-destructive sm:p-6">Unable to load brand voice profile.</div>;
+  const formKey = data?.tone ?? "new";
 
-  const formKey = data ? `${data.style}-${data.formality_level}-${data.persona_prompt.length}` : "new";
+  const selectedTone = TONE_OPTIONS.find(t => t.value === data?.tone);
 
   return (
     <PageContainer>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="space-y-4 lg:col-span-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
           <PageHeader
             className="rounded-2xl p-5"
-            title="Brand Voice Studio"
-            description="Define voice style and writing guardrails for consistent AI-generated content."
+            title="Brand Voice"
+            description="Choose how your brand sounds to your audience."
+            badge={
+              <p className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+                <Sparkles className="w-3 h-3" />
+                Brand Voice
+              </p>
+            }
           />
 
           <BrandVoiceForm key={formKey} data={data} />
         </div>
 
-        <aside className="space-y-4 lg:col-span-2">
-          <Card className="border-outline-variant/20 bg-white shadow-sm ring-outline-variant/20">
-            <CardContent className="pt-6">
-              <h3 className="text-lg font-black">Voice Snapshot</h3>
-              <p className="mt-1 text-xs text-on-surface-variant">Current applied profile</p>
-              <div className="mt-4 space-y-3 text-sm">
-                <div className="flex items-center justify-between rounded-lg bg-surface-container-low/50 px-3 py-2">
-                  <span className="text-on-surface-variant">Style</span>
-                  <span className="font-semibold capitalize">{data?.style ?? "Not set"}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg bg-surface-container-low/50 px-3 py-2">
-                  <span className="text-on-surface-variant">Formality</span>
-                  <span className="font-semibold">{formalityText}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg bg-surface-container-low/50 px-3 py-2">
-                  <span className="text-on-surface-variant">Samples</span>
-                  <span className="font-semibold">{data?.sample_approved_posts?.length ?? 0}</span>
+        <aside className="space-y-4">
+          <div className="rounded-2xl border border-outline-variant/20 bg-gradient-to-br from-primary/5 to-primary-container/30 p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-on-surface mb-1">Current Tone</h3>
+            <p className="text-xs text-on-surface-variant mb-4">Used for AI content generation</p>
+            {selectedTone ? (
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-white shadow-sm border border-outline-variant/20">
+                {(() => {
+                  const IconComp = selectedTone.icon;
+                  return <div className={cn("p-3 rounded-lg", selectedTone.bgColor)}><IconComp className={cn("w-6 h-6", selectedTone.iconColor)} /></div>;
+                })()}
+                <div>
+                  <span className="block text-lg font-semibold text-on-surface capitalize">{selectedTone.label}</span>
+                  <span className="text-xs text-on-surface-variant">AI will use this tone</span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            ) : (
+              <div className="rounded-xl border border-dashed border-outline-variant/40 bg-white/50 p-4 text-center">
+                <span className="text-sm text-on-surface-variant">No tone selected yet</span>
+              </div>
+            )}
+          </div>
 
-          <Card className="border-outline-variant/20 bg-white shadow-sm ring-outline-variant/20">
-            <CardContent className="pt-6">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-on-surface-variant">Persona Preview</h3>
-              <p className="mt-3 rounded-xl border border-outline-variant/20 bg-surface-container-low/40 p-3 text-sm leading-relaxed">
-                {data?.persona_prompt ?? "No persona prompt configured yet."}
-              </p>
-            </CardContent>
-          </Card>
+          <div className="rounded-2xl border border-outline-variant/20 bg-white p-6 shadow-sm">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-on-surface-variant mb-3">
+              How it works
+            </h3>
+            <ul className="space-y-2 text-sm text-on-surface">
+              <li className="flex items-start gap-2">
+                <span className="text-primary">1.</span>
+                Select a tone that matches your brand
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary">2.</span>
+                Save your choice
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary">3.</span>
+                AI uses this tone for post generation
+              </li>
+            </ul>
+          </div>
         </aside>
       </div>
     </PageContainer>
